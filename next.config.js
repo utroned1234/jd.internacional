@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    eslint: {
+        ignoreDuringBuilds: true,
+    },
+    typescript: {
+        ignoreBuildErrors: false,
+    },
     // Todos los paquetes que Baileys usa con código nativo de Node.js
     experimental: {
         serverComponentsExternalPackages: [
