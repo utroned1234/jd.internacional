@@ -130,7 +130,7 @@ export default function AdminWithdrawalsPage() {
           <div className="divide-y divide-white/5">
             {requests.map(r => (
               <div key={r.id} className="px-4 py-4">
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <p className="text-sm font-bold">{r.user.fullName}</p>

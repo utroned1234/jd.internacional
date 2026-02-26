@@ -263,7 +263,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── STATS CARDS ── */}
-      <div className="grid grid-cols-4 gap-2 sm:gap-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
         {[
           { icon: Users,      label: 'Mi Red',      val: data.stats.totalNetwork,                             from: '#00F5FF', to: '#0066FF' },
           { icon: TrendingUp, label: 'Directos',    val: data.stats.directReferrals,                          from: '#FF2DF7', to: '#9B00FF' },
@@ -292,7 +292,7 @@ export default function DashboardPage() {
         <div className="relative z-10 p-4 sm:p-6">
 
           {/* Header del gráfico */}
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(0,245,255,0.1)', border: '1px solid rgba(0,245,255,0.2)' }}>
                 <Activity className="w-3.5 h-3.5" style={{ color: '#00F5FF' }} />
