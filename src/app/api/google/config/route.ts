@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { encrypt } from '@/lib/encryption'
+import { encrypt } from '@/lib/ads/encryption'
 
 // Mock User ID
 const MOCK_USER_ID = '0d7be653-0d1d-412c-a6a1-85e294a4db1c'
@@ -18,12 +18,12 @@ export async function POST(request: Request) {
             where: { userId },
             update: {
                 serviceAccountEmail,
-                privateKey: encrypt(privateKey)
+                privateKey: encrypt(privateKey, process.env.ADS_ENCRYPTION_KEY!)
             },
             create: {
                 userId,
                 serviceAccountEmail,
-                privateKey: encrypt(privateKey)
+                privateKey: encrypt(privateKey, process.env.ADS_ENCRYPTION_KEY!)
             }
         })
 
