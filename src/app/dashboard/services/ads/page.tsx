@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import {
     Megaphone, Plus, ArrowRight, CheckCircle2,
     Sparkles, FileText, Zap, BarChart3, Settings2,
@@ -26,6 +26,18 @@ const STATUS_LABELS: Record<string, { label: string; color: string; dot: string 
 }
 
 export default function AdsDashboard() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+      </div>
+    }>
+      <AdsDashboardInner />
+    </Suspense>
+  )
+}
+
+function AdsDashboardInner() {
     const [integrations, setIntegrations] = useState<any[]>([])
     const [campaigns, setCampaigns] = useState<any[]>([])
     const [brief, setBrief] = useState<any>(null)
