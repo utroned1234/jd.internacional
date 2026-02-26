@@ -1,20 +1,20 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Users, Copy, Check, TrendingUp, Network, DollarSign, ChevronDown, ChevronUp, Gift, Share2, UserCircle, Zap } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Users, Copy, Check, TrendingUp, Network, DollarSign, Gift, Share2, UserCircle, Zap, Search, X } from 'lucide-react'
 
-// ── Colores por nivel ────────────────────────────────────────────────────────
+// ── Colores por nivel ─────────────────────────────────────────────────────────
 const LEVEL_CFG = [
-  { color: '#00F5FF', shadow: 'rgba(0,245,255,0.35)', label: 'Referidos directos',  ring: 'rgba(0,245,255,0.25)' },
-  { color: '#FF2DF7', shadow: 'rgba(255,45,247,0.35)', label: 'Nivel 2',            ring: 'rgba(255,45,247,0.25)' },
-  { color: '#9B00FF', shadow: 'rgba(155,0,255,0.35)',  label: 'Nivel 3',            ring: 'rgba(155,0,255,0.25)' },
-  { color: '#FFB800', shadow: 'rgba(255,184,0,0.35)',  label: 'Nivel 4',            ring: 'rgba(255,184,0,0.25)' },
-  { color: '#00FF88', shadow: 'rgba(0,255,136,0.35)',  label: 'Nivel 5',            ring: 'rgba(0,255,136,0.25)' },
+  { color: '#00F5FF', label: 'Referidos directos' },
+  { color: '#FF2DF7', label: 'Nivel 2' },
+  { color: '#9B00FF', label: 'Nivel 3' },
+  { color: '#FFB800', label: 'Nivel 4' },
+  { color: '#00FF88', label: 'Nivel 5' },
 ]
 
 function getLevel(n: number) { return LEVEL_CFG[(n - 1) % LEVEL_CFG.length] }
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 interface LevelData {
   level: number
   count: number
@@ -39,10 +39,15 @@ interface NetworkData {
     totalCommissions: number
   }
 }
+interface FlatMember {
+  username: string
+  fullName: string
+  isActive: boolean
+  level: number
+}
 
-// ── Avatar node ──────────────────────────────────────────────────────────────
-function AvatarNode({ name, active, color, size = 36 }: { name: string; active: boolean; color: string; size?: number }) {
-  const initial = name.charAt(0).toUpperCase()
+// ── Avatar ────────────────────────────────────────────────────────────────────
+function AvatarNode({ name, active, color, size = 32 }: { name: string; active: boolean; color: string; size?: number }) {
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <div
@@ -50,26 +55,27 @@ function AvatarNode({ name, active, color, size = 36 }: { name: string; active: 
         style={{
           background: `${color}20`,
           border: `1.5px solid ${color}50`,
-          fontSize: size > 32 ? 13 : 10,
+          fontSize: size > 32 ? 13 : 11,
           boxShadow: active ? `0 0 8px ${color}40` : 'none',
         }}
       >
-        {initial}
+        {name.charAt(0).toUpperCase()}
       </div>
       <div
         className="absolute -bottom-0.5 -right-0.5 rounded-full border border-[#0a0a0f]"
-        style={{ width: size > 32 ? 9 : 7, height: size > 32 ? 9 : 7, background: active ? '#00FF88' : 'rgba(255,255,255,0.15)' }}
+        style={{ width: 8, height: 8, background: active ? '#00FF88' : 'rgba(255,255,255,0.15)' }}
       />
     </div>
   )
 }
 
-// ── Main component ───────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function NetworkPage() {
   const [data, setData] = useState<NetworkData | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
-  const [expanded, setExpanded] = useState<number[]>([1])
+  const [search, setSearch] = useState('')
+  const [levelFilter, setLevelFilter] = useState<'all' | number>('all')
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
@@ -87,9 +93,21 @@ export default function NetworkPage() {
     setTimeout(() => setCopied(false), 2500)
   }
 
-  function toggleLevel(level: number) {
-    setExpanded(prev => prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level])
-  }
+  // Flatten all members with their level
+  const allMembers = useMemo<FlatMember[]>(() => {
+    if (!data) return []
+    return data.levels.flatMap(lv => lv.members.map(m => ({ ...m, level: lv.level })))
+  }, [data])
+
+  // Filtered members
+  const filteredMembers = useMemo(() => {
+    const q = search.toLowerCase()
+    return allMembers.filter(m => {
+      const matchLevel = levelFilter === 'all' || m.level === levelFilter
+      const matchSearch = !q || m.fullName.toLowerCase().includes(q) || m.username.toLowerCase().includes(q)
+      return matchLevel && matchSearch
+    })
+  }, [allMembers, search, levelFilter])
 
   if (loading) {
     return (
@@ -131,15 +149,15 @@ export default function NetworkPage() {
       {/* ── STATS CARDS ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: 'Red total',  val: stats.totalNetwork,                           from: '#00F5FF', to: '#0066FF',  icon: Users },
-          { label: 'Activos',    val: stats.totalActive,                            from: '#00FF88', to: '#00C2FF',  icon: TrendingUp },
-          { label: 'Directos',   val: stats.directReferrals,                        from: '#FF2DF7', to: '#9B00FF',  icon: Network },
-          { label: 'Comisiones', val: `$${stats.totalCommissions.toFixed(2)}`,      from: '#FFB800', to: '#FF5C00',  icon: DollarSign },
+          { label: 'Red total',  val: stats.totalNetwork,                     from: '#00F5FF', to: '#0066FF',  icon: Users },
+          { label: 'Activos',    val: stats.totalActive,                      from: '#00FF88', to: '#00C2FF',  icon: TrendingUp },
+          { label: 'Directos',   val: stats.directReferrals,                  from: '#FF2DF7', to: '#9B00FF',  icon: Network },
+          { label: 'Comisiones', val: `$${stats.totalCommissions.toFixed(2)}`, from: '#FFB800', to: '#FF5C00', icon: DollarSign },
         ].map((s, i) => (
-          <div key={i}
-            className="relative rounded-2xl p-4 overflow-hidden border"
+          <div key={i} className="relative rounded-2xl p-4 overflow-hidden border"
             style={{ background: `linear-gradient(135deg, ${s.from}12, ${s.to}08)`, borderColor: `${s.from}25` }}>
-            <div className="absolute top-0 left-0 right-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${s.from}80, transparent)` }} />
+            <div className="absolute top-0 left-0 right-0 h-px"
+              style={{ background: `linear-gradient(90deg, transparent, ${s.from}80, transparent)` }} />
             <s.icon className="w-4 h-4 mb-2" style={{ color: s.from }} />
             <p className="text-2xl font-black tracking-tighter" style={{ color: s.from }}>{s.val}</p>
             <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5 text-white/30">{s.label}</p>
@@ -150,7 +168,8 @@ export default function NetworkPage() {
       {/* ── REFERRAL BANNER ── */}
       <div className="relative rounded-2xl overflow-hidden p-4"
         style={{ background: 'linear-gradient(135deg, rgba(0,245,255,0.06), rgba(155,0,255,0.06))', border: '1px solid rgba(0,245,255,0.15)' }}>
-        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, #00F5FF, #FF2DF7, transparent)' }} />
+        <div className="absolute top-0 left-0 right-0 h-px"
+          style={{ background: 'linear-gradient(90deg, transparent, #00F5FF, #FF2DF7, transparent)' }} />
         <div className="flex items-center gap-2 mb-2">
           <Share2 className="w-3.5 h-3.5" style={{ color: '#00F5FF' }} />
           <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#00F5FF' }}>Tu link de referido</p>
@@ -178,99 +197,129 @@ export default function NetworkPage() {
         </div>
       </div>
 
-      {/* ── ÁRBOL VISUAL ── */}
+      {/* ── RESUMEN POR NIVELES ── */}
       {levels.length > 0 && (
-        <div className="relative rounded-2xl overflow-hidden p-5"
+        <div className="rounded-2xl p-5"
           style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)' }} />
-          <p className="text-[10px] font-black uppercase tracking-widest text-white/25 mb-5 text-center">Estructura de tu red</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-white/25 mb-5 text-center">Estructura por niveles</p>
 
-          {/* Nodo raíz: TÚ */}
-          <div className="flex flex-col items-center">
-            <div className="relative">
-              <div className="w-14 h-14 rounded-full flex items-center justify-center font-black text-base"
-                style={{ background: 'rgba(0,245,255,0.12)', border: '2px solid rgba(0,245,255,0.5)', color: '#00F5FF', boxShadow: '0 0 20px rgba(0,245,255,0.25)' }}>
-                <UserCircle className="w-7 h-7" style={{ color: '#00F5FF' }} />
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0a0a0f]"
-                style={{ background: '#00FF88', boxShadow: '0 0 6px #00FF88' }} />
+          {/* YOU node */}
+          <div className="flex flex-col items-center mb-2">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(0,245,255,0.12)', border: '2px solid rgba(0,245,255,0.5)', boxShadow: '0 0 20px rgba(0,245,255,0.2)' }}>
+              <UserCircle className="w-6 h-6" style={{ color: '#00F5FF' }} />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-widest mt-2" style={{ color: '#00F5FF' }}>Tú</p>
+            <p className="text-[9px] font-black uppercase tracking-widest mt-1.5" style={{ color: '#00F5FF' }}>Tú</p>
           </div>
 
-          {/* Niveles */}
-          {levels.map((level, li) => {
-            const cfg = getLevel(level.level)
-            const maxVisible = 8
-            const visible = level.members.slice(0, maxVisible)
-            const extra = level.count - maxVisible
-
-            return (
-              <div key={level.level} className="flex flex-col items-center">
-                {/* Conector vertical */}
-                <div className="flex flex-col items-center py-1">
-                  <div className="w-px h-4" style={{ background: `linear-gradient(to bottom, ${li === 0 ? 'rgba(0,245,255,0.5)' : cfg.color + '50'}, ${cfg.color}70)` }} />
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.color, boxShadow: `0 0 5px ${cfg.color}` }} />
-                  <div className="w-px h-3" style={{ background: `${cfg.color}50` }} />
-                </div>
-
-                {/* Row de avatares */}
-                <div className="w-full rounded-2xl px-4 py-3"
-                  style={{ background: `${cfg.color}08`, border: `1px solid ${cfg.color}20` }}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-lg flex items-center justify-center text-[9px] font-black"
-                        style={{ background: `${cfg.color}20`, border: `1px solid ${cfg.color}40`, color: cfg.color }}>
-                        {level.level}
-                      </div>
-                      <span className="text-[11px] font-bold" style={{ color: cfg.color }}>
-                        {level.level === 1 ? 'Referidos directos' : `Nivel ${level.level}`}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)', color: '#00FF88' }}>
-                        {level.active} activos
-                      </span>
-                      <span className="text-lg font-black" style={{ color: cfg.color }}>{level.count}</span>
-                    </div>
+          {/* Level rows */}
+          <div className="flex flex-col items-center">
+            {levels.map((level) => {
+              const cfg = getLevel(level.level)
+              const pct = level.count > 0 ? (level.active / level.count) * 100 : 0
+              return (
+                <div key={level.level} className="flex flex-col items-center w-full max-w-md">
+                  {/* Connector */}
+                  <div className="flex flex-col items-center">
+                    <div className="w-px h-3" style={{ background: `${cfg.color}50` }} />
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.color, boxShadow: `0 0 5px ${cfg.color}` }} />
+                    <div className="w-px h-2" style={{ background: `${cfg.color}40` }} />
                   </div>
-
-                  {/* Avatares en fila */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {visible.map((m, mi) => (
-                      <div key={mi} className="flex flex-col items-center gap-0.5 group/node">
-                        <AvatarNode name={m.fullName} active={m.isActive} color={cfg.color} size={32} />
+                  {/* Bar */}
+                  <div className="w-full rounded-xl px-4 py-3 flex items-center gap-3"
+                    style={{ background: `${cfg.color}08`, border: `1px solid ${cfg.color}20` }}>
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0"
+                      style={{ background: `${cfg.color}20`, border: `1px solid ${cfg.color}40`, color: cfg.color }}>
+                      {level.level}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[11px] font-bold" style={{ color: cfg.color }}>
+                          {level.level === 1 ? 'Referidos directos' : `Nivel ${level.level}`}
+                        </span>
+                        <span className="text-base font-black" style={{ color: cfg.color }}>{level.count}</span>
                       </div>
-                    ))}
-                    {extra > 0 && (
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shrink-0"
-                        style={{ background: `${cfg.color}15`, border: `1.5px dashed ${cfg.color}40`, color: cfg.color }}>
-                        +{extra}
+                      <div className="h-1 rounded-full bg-white/5 overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${cfg.color}70, ${cfg.color})` }} />
                       </div>
-                    )}
-                    {level.count === 0 && (
-                      <p className="text-[10px] text-white/20">Sin miembros aún</p>
-                    )}
-                  </div>
-
-                  {/* Barra de actividad */}
-                  <div className="mt-2 h-1 rounded-full bg-white/5 overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${level.count > 0 ? (level.active / level.count) * 100 : 0}%`, background: `linear-gradient(90deg, ${cfg.color}80, ${cfg.color})` }} />
+                      <div className="flex justify-between mt-1">
+                        <span className="text-[9px]" style={{ color: '#00FF88' }}>{level.active} activos</span>
+                        <span className="text-[9px] text-white/25">{level.count - level.active} inactivos</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       )}
 
-      {/* ── DETALLE POR NIVEL (acordeón) ── */}
-      <div className="space-y-2">
-        <p className="text-[10px] font-black uppercase tracking-widest text-white/25">Detalle por nivel</p>
+      {/* ── TODA LA RED ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-black uppercase tracking-widest text-white/25">Toda la red</p>
+          <span className="text-[10px] text-white/30">{filteredMembers.length} miembros</span>
+        </div>
 
-        {levels.length === 0 ? (
+        {/* Search */}
+        <div className="relative">
+          <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre o usuario..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-9 py-2.5 rounded-xl text-sm text-white placeholder-white/25 focus:outline-none transition-colors"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/50 transition-colors"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+
+        {/* Level filter tabs */}
+        {levels.length > 0 && (
+          <div className="flex gap-1 flex-wrap">
+            <button
+              onClick={() => setLevelFilter('all')}
+              className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all"
+              style={{
+                background: levelFilter === 'all' ? 'rgba(0,245,255,0.15)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${levelFilter === 'all' ? 'rgba(0,245,255,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                color: levelFilter === 'all' ? '#00F5FF' : 'rgba(255,255,255,0.3)',
+              }}
+            >
+              Todos ({allMembers.length})
+            </button>
+            {levels.map(level => {
+              const cfg = getLevel(level.level)
+              const active = levelFilter === level.level
+              return (
+                <button
+                  key={level.level}
+                  onClick={() => setLevelFilter(level.level)}
+                  className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all"
+                  style={{
+                    background: active ? `${cfg.color}15` : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${active ? `${cfg.color}40` : 'rgba(255,255,255,0.08)'}`,
+                    color: active ? cfg.color : 'rgba(255,255,255,0.3)',
+                  }}
+                >
+                  N{level.level} ({level.count})
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Member list */}
+        {allMembers.length === 0 ? (
           <div className="text-center py-14 rounded-3xl"
             style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.08)' }}>
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
@@ -280,82 +329,41 @@ export default function NetworkPage() {
             <p className="text-white/30 text-sm font-bold mb-1">Aún no tienes referidos</p>
             <p className="text-white/15 text-xs">Comparte tu link y empieza a construir tu red</p>
           </div>
+        ) : filteredMembers.length === 0 ? (
+          <div className="text-center py-10 rounded-2xl"
+            style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.06)' }}>
+            <p className="text-white/30 text-sm">Sin resultados para &ldquo;{search}&rdquo;</p>
+          </div>
         ) : (
-          levels.map((level) => {
-            const cfg = getLevel(level.level)
-            const isExp = expanded.includes(level.level)
-            const pct = level.count > 0 ? Math.round((level.active / level.count) * 100) : 0
-
-            return (
-              <div key={level.level} className="rounded-2xl overflow-hidden transition-all"
-                style={{ border: `1px solid ${cfg.color}25`, background: `${cfg.color}05` }}>
-
-                {/* Fila header */}
-                <button
-                  onClick={() => toggleLevel(level.level)}
-                  className="w-full flex items-center gap-3 px-4 py-3 transition-all hover:brightness-110"
-                >
-                  {/* Badge nivel */}
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-black shrink-0"
-                    style={{ background: `${cfg.color}15`, border: `1px solid ${cfg.color}35`, color: cfg.color }}>
-                    N{level.level}
+          <div className="rounded-2xl overflow-hidden divide-y divide-white/[0.04]"
+            style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            {filteredMembers.map((m, i) => {
+              const cfg = getLevel(m.level)
+              return (
+                <div key={`${m.level}-${m.username}-${i}`} className="flex items-center gap-3 px-4 py-3">
+                  <AvatarNode name={m.fullName} active={m.isActive} color={cfg.color} size={32} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-white/85 truncate">{m.fullName}</p>
+                    <p className="text-[10px] text-white/30 truncate">@{m.username}</p>
                   </div>
-
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-bold text-white">{level.level === 1 ? 'Referidos directos' : `Nivel ${level.level}`}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[9px] font-bold" style={{ color: '#00FF88' }}>{level.active} activos</span>
-                      <span className="text-[9px] text-white/25">·</span>
-                      <span className="text-[9px] text-white/30">{level.count - level.active} inactivos</span>
-                      <span className="text-[9px] text-white/25">·</span>
-                      <span className="text-[9px] font-bold" style={{ color: cfg.color }}>{pct}% activación</span>
-                    </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
+                      style={{ background: `${cfg.color}15`, border: `1px solid ${cfg.color}30`, color: cfg.color }}>
+                      N{m.level}
+                    </span>
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
+                      style={{
+                        background: m.isActive ? 'rgba(0,255,136,0.1)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${m.isActive ? 'rgba(0,255,136,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                        color: m.isActive ? '#00FF88' : 'rgba(255,255,255,0.2)',
+                      }}>
+                      {m.isActive ? 'Activo' : 'Inactivo'}
+                    </span>
                   </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-2xl font-black" style={{ color: cfg.color }}>{level.count}</span>
-                    {isExp
-                      ? <ChevronUp size={14} className="text-white/30" />
-                      : <ChevronDown size={14} className="text-white/30" />
-                    }
-                  </div>
-                </button>
-
-                {/* Barra de progreso */}
-                <div className="h-px mx-4 rounded-full overflow-hidden bg-white/5">
-                  <div className="h-full rounded-full transition-all duration-700"
-                    style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${cfg.color}60, ${cfg.color})` }} />
                 </div>
-
-                {/* Lista de miembros */}
-                {isExp && (
-                  <div className="px-4 pb-4 pt-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                      {level.members.map((m, mi) => (
-                        <div key={mi}
-                          className="flex items-center gap-2.5 py-2 px-3 rounded-xl transition-colors"
-                          style={{ background: 'rgba(255,255,255,0.025)' }}>
-                          <AvatarNode name={m.fullName} active={m.isActive} color={cfg.color} size={28} />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-white/80 truncate">{m.fullName}</p>
-                            <p className="text-[10px] text-white/30 truncate">@{m.username}</p>
-                          </div>
-                          <span className="text-[9px] font-black uppercase shrink-0 px-1.5 py-0.5 rounded-full"
-                            style={{
-                              background: m.isActive ? 'rgba(0,255,136,0.1)' : 'rgba(255,255,255,0.04)',
-                              border: `1px solid ${m.isActive ? 'rgba(0,255,136,0.25)' : 'rgba(255,255,255,0.08)'}`,
-                              color: m.isActive ? '#00FF88' : 'rgba(255,255,255,0.2)',
-                            }}>
-                            {m.isActive ? 'Activo' : 'Inactivo'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          })
+              )
+            })}
+          </div>
         )}
       </div>
 
@@ -384,7 +392,6 @@ export default function NetworkPage() {
       {/* ── BONOS ── */}
       <div className="space-y-2">
         <p className="text-[10px] font-black uppercase tracking-widest text-white/25">Bonos de patrocinio recibidos</p>
-
         {recentBonuses.length === 0 ? (
           <div className="text-center py-10 rounded-3xl"
             style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.08)' }}>
@@ -393,8 +400,8 @@ export default function NetworkPage() {
             <p className="text-white/15 text-[11px] mt-1">Cuando alguien de tu red active un plan recibirás el 20%</p>
           </div>
         ) : (
-          <div className="rounded-2xl overflow-hidden divide-y"
-            style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.05)' }}>
+          <div className="rounded-2xl overflow-hidden divide-y divide-white/[0.04]"
+            style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
             {recentBonuses.map((bonus) => (
               <div key={bonus.id} className="flex items-center gap-3 px-4 py-3">
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
