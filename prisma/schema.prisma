@@ -1,0 +1,739 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                  String               @id @default(uuid()) @db.Uuid
+  username            String               @unique
+  email               String               @unique
+  passwordHash        String               @map("password_hash")
+  fullName            String               @map("full_name")
+  country             String
+  city                String
+  identityDocument    String               @map("identity_document")
+  dateOfBirth         DateTime             @map("date_of_birth") @db.Date
+  referralCode        String               @unique @map("referral_code")
+  sponsorId           String?              @map("sponsor_id") @db.Uuid
+  avatarUrl           String?              @map("avatar_url")
+  isActive            Boolean              @default(true) @map("is_active")
+  plan                UserPlan             @default(NONE)
+  isAdmin             Boolean              @default(false) @map("is_admin")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  binaryPosition      BinaryPosition?
+  bots                Bot[]
+  commissions         Commission[]
+  passwordResetTokens PasswordResetToken[]
+  stores              Store[]
+  landingPages        LandingPage[]
+  adIntegrations      AdIntegration[]
+  adDrafts            AdDraft[]
+  adAssets            AdAsset[]
+  adJobs              AdJob[]
+  auditLogs           AuditLog[]
+  openaiConfig        OpenAIConfig?
+  businessBriefs      BusinessBrief[]
+  adCampaignsV2       AdCampaignV2[]
+  packPurchaseRequests PackPurchaseRequest[]
+  withdrawalRequests   WithdrawalRequest[]
+  sponsor             User?                @relation("Sponsorship", fields: [sponsorId], references: [id])
+  referrals           User[]               @relation("Sponsorship")
+
+  @@map("users")
+}
+
+model BinaryPosition {
+  id          String           @id @default(uuid()) @db.Uuid
+  userId      String           @unique @map("user_id") @db.Uuid
+  parentId    String?          @map("parent_id") @db.Uuid
+  position    Position?
+  leftVolume  Int              @default(0) @map("left_volume")
+  rightVolume Int              @default(0) @map("right_volume")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  parent      BinaryPosition?  @relation("BinaryTree", fields: [parentId], references: [id])
+  children    BinaryPosition[] @relation("BinaryTree")
+  user        User             @relation(fields: [userId], references: [id])
+
+  @@map("binary_positions")
+}
+
+model Commission {
+  id          String         @id @default(uuid()) @db.Uuid
+  userId      String         @map("user_id") @db.Uuid
+  fromUserId  String?        @map("from_user_id") @db.Uuid
+  type        CommissionType
+  amount      Decimal        @db.Decimal(12, 2)
+  description String?
+  createdAt   DateTime       @default(now()) @map("created_at")
+  user        User           @relation(fields: [userId], references: [id])
+
+  @@map("commissions")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("password_reset_tokens")
+}
+
+model Bot {
+  id                   String         @id @default(uuid()) @db.Uuid
+  userId               String         @map("user_id") @db.Uuid
+  name                 String
+  type                 BotType        @default(YCLOUD)
+  status               BotStatus      @default(ACTIVE)
+  webhookToken         String         @unique @map("webhook_token")
+  systemPromptTemplate String?        @map("system_prompt_template")
+  maxCharsMensaje1     Int?           @map("max_chars_mensaje1")
+  maxCharsMensaje2     Int?           @map("max_chars_mensaje2")
+  maxCharsMensaje3     Int?           @map("max_chars_mensaje3")
+  baileysPhone         String?        @map("baileys_phone")
+  followUp1Delay       Int            @default(15) @map("follow_up_1_delay")
+  followUp2Delay       Int            @default(4320) @map("follow_up_2_delay")
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
+  secret               BotSecret?
+  user                 User           @relation(fields: [userId], references: [id])
+  conversations        Conversation[]
+  products             Product[]
+  stores               Store[]
+
+  @@index([userId])
+  @@map("bots")
+}
+
+model BotSecret {
+  id                     String @id @default(uuid()) @db.Uuid
+  botId                  String @unique @map("bot_id") @db.Uuid
+  ycloudApiKeyEnc        String @map("ycloud_api_key_enc")
+  openaiApiKeyEnc        String @map("openai_api_key_enc")
+  whatsappInstanceNumber String @map("whatsapp_instance_number")
+  reportPhone            String @map("report_phone")
+  bot                    Bot    @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("bot_secrets")
+}
+
+model Product {
+  id                    String   @id @default(uuid()) @db.Uuid
+  botId                 String   @map("bot_id") @db.Uuid
+  name                  String
+  category              String?
+  benefits              String?
+  usage                 String?
+  warnings              String?
+  priceUnit             Decimal? @map("price_unit") @db.Decimal(10, 2)
+  pricePromo2           Decimal? @map("price_promo2") @db.Decimal(10, 2)
+  priceSuper6           Decimal? @map("price_super6") @db.Decimal(10, 2)
+  currency              String   @default("USD")
+  welcomeMessage        String?  @map("welcome_message")
+  firstMessage          String?  @map("first_message")
+  hooks                 Json     @default("[]")
+  imageMainUrls         Json     @default("[]") @map("image_main_urls")
+  imagePriceUnitUrl     String?  @map("image_price_unit_url")
+  imagePricePromoUrl    String?  @map("image_price_promo_url")
+  imagePriceSuperUrl    String?  @map("image_price_super_url")
+  testimonialsVideoUrls Json     @default("[]") @map("testimonials_video_urls")
+  shippingInfo          String?  @map("shipping_info")
+  coverage              String?
+  tags                  Json     @default("[]")
+  active                Boolean  @default(true)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  bot                   Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@index([botId, active])
+  @@map("products")
+}
+
+model Conversation {
+  id            String    @id @default(uuid()) @db.Uuid
+  botId         String    @map("bot_id") @db.Uuid
+  userPhone     String    @map("user_phone")
+  userName      String?   @map("user_name")
+  sold          Boolean   @default(false)
+  soldAt        DateTime? @map("sold_at")
+  followUp1At   DateTime? @map("follow_up_1_at")
+  followUp1Sent Boolean   @default(false) @map("follow_up_1_sent")
+  followUp2At   DateTime? @map("follow_up_2_at")
+  followUp2Sent Boolean   @default(false) @map("follow_up_2_sent")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  botState      BotState?
+  bot           Bot       @relation(fields: [botId], references: [id], onDelete: Cascade)
+  messages      Message[]
+
+  @@unique([botId, userPhone])
+  @@index([botId, userPhone, sold, followUp1At, followUp1Sent])
+  @@index([botId, userPhone, sold, followUp2At, followUp2Sent])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid()) @db.Uuid
+  conversationId String       @map("conversation_id") @db.Uuid
+  role           MessageRole
+  type           MessageType  @default(text)
+  content        String
+  buffered       Boolean      @default(false)
+  messageId      String?      @unique @map("message_id")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([conversationId, buffered])
+  @@map("messages")
+}
+
+model BotState {
+  id                String       @id @default(uuid()) @db.Uuid
+  conversationId    String       @unique @map("conversation_id") @db.Uuid
+  welcomeSent       Boolean      @default(false) @map("welcome_sent")
+  welcomeSentAt     DateTime?    @map("welcome_sent_at")
+  selectedProductId String?      @map("selected_product_id") @db.Uuid
+  lastIntent        String?      @map("last_intent")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("bot_states")
+}
+
+model Store {
+  id             String         @id @default(uuid()) @db.Uuid
+  userId         String         @map("user_id") @db.Uuid
+  botId          String?        @map("bot_id") @db.Uuid
+  name           String
+  slug           String         @unique
+  type           StoreType      @default(CATALOG)
+  whatsappNumber String?        @map("whatsapp_number")
+  paymentQrUrl   String?        @map("payment_qr_url")
+  description    String?
+  logoUrl        String?        @map("logo_url")
+  bannerUrl      String?        @map("banner_url")
+  themeConfig    Json           @default("{}") @map("theme_config")
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  products       StoreProduct[]
+  bot            Bot?           @relation(fields: [botId], references: [id])
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("stores")
+}
+
+model StoreProduct {
+  id          String   @id @default(uuid()) @db.Uuid
+  storeId     String   @map("store_id") @db.Uuid
+  name        String
+  description String?
+  category    String?  @default("General")
+  price       Decimal  @db.Decimal(10, 2)
+  currency    String   @default("USD") @db.VarChar(5)
+  points      Decimal? @default(0) @db.Decimal(10, 2)
+  stock       Int      @default(0)
+  images      Json     @default("[]")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@map("store_products")
+}
+
+enum UserPlan {
+  NONE
+  BASIC
+  PRO
+  ELITE
+}
+
+enum Position {
+  LEFT
+  RIGHT
+}
+
+enum CommissionType {
+  BINARY_BONUS
+  DIRECT_BONUS
+  SPONSORSHIP_BONUS
+}
+
+enum BotStatus {
+  ACTIVE
+  PAUSED
+}
+
+enum BotType {
+  YCLOUD
+  BAILEYS
+}
+
+enum MessageRole {
+  user
+  assistant
+}
+
+enum MessageType {
+  text
+  audio
+  image
+  location
+}
+
+enum StoreType {
+  CATALOG
+  LANDING
+  NETWORK_MARKETING
+  GENERAL_BUSINESS
+}
+
+model LandingPage {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  name         String
+  slug         String   @unique
+  templateId   String   @default("default") @map("template_id")
+  sections     Json     @default("[]")
+  globalStyles Json     @default("{}") @map("global_styles")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leads        Lead[]
+
+  @@map("landing_pages")
+}
+
+model Lead {
+  id            String      @id @default(uuid()) @db.Uuid
+  landingPageId String      @map("landing_page_id") @db.Uuid
+  name          String?
+  email         String?
+  phone         String?
+  data          Json        @default("{}")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  landingPage   LandingPage @relation(fields: [landingPageId], references: [id], onDelete: Cascade)
+
+  @@map("leads")
+}
+
+// --- Ads Service PRO Models ---
+
+enum AdPlatform {
+  META
+  GOOGLE_ADS
+  TIKTOK
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  NEEDS_RECONNECT
+  DISCONNECTED
+  ERROR
+}
+
+enum DraftStatus {
+  DRAFT
+  VALIDATED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+}
+
+enum RemoteStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+  UNKNOWN
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  RETRYING
+}
+
+enum AdJobType {
+  PUBLISH
+  SYNC_METRICS
+  HEALTH
+  REFRESH_TOKEN
+}
+
+model AdIntegration {
+  id               String               @id @default(uuid()) @db.Uuid
+  orgId            String?              @map("org_id") @db.Uuid
+  businessId       String?              @map("business_id") @db.Uuid
+  userId           String               @map("user_id") @db.Uuid
+  platform         AdPlatform
+  status           IntegrationStatus    @default(DISCONNECTED)
+  scopes           Json?                @default("[]")
+  lastHealthAt     DateTime?            @map("last_health_at")
+  lastError        String?              @map("last_error")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token            AdOAuthToken?
+  connectedAccount AdConnectedAccount?
+
+  @@unique([userId, platform])
+  @@index([userId, status])
+  @@map("ad_integrations")
+}
+
+model AdConnectedAccount {
+  id                String         @id @default(uuid()) @db.Uuid
+  integrationId     String         @unique @map("integration_id") @db.Uuid
+  providerAccountId String         @map("provider_account_id")
+  displayName       String?        @map("display_name")
+  currency          String?        @default("USD")
+  timezone          String?
+  isDefault         Boolean        @default(false) @map("is_default")
+  status            RemoteStatus   @default(ACTIVE)
+  lastSyncAt        DateTime?      @map("last_sync_at")
+  integration       AdIntegration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  drafts            AdDraft[]
+  campaignsV2       AdCampaignV2[]
+
+  @@map("ad_connected_accounts")
+}
+
+model AdOAuthToken {
+  id                     String        @id @default(uuid()) @db.Uuid
+  integrationId          String        @unique @map("integration_id") @db.Uuid
+  accessTokenEncrypted   String        @map("access_token_encrypted")
+  refreshTokenEncrypted  String?       @map("refresh_token_encrypted")
+  expiresAt              DateTime?     @map("expires_at")
+  tokenType              String?       @map("token_type")
+  createdAt              DateTime      @default(now()) @map("created_at")
+  rotatedAt              DateTime?     @map("rotated_at")
+  integration            AdIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@map("ad_oauth_tokens")
+}
+
+model AdAsset {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  type        AssetType @default(IMAGE)
+  storageUrl  String    @map("storage_url")
+  mimeType    String?   @map("mime_type")
+  width       Int?
+  height      Int?
+  durationSec Int?      @map("duration_sec")
+  hash        String?
+  sizeBytes   Int?      @map("size_bytes")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  drafts      AdDraft[] @relation("AdDraftToAsset")
+
+  @@map("ad_assets")
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+}
+
+model AdDraft {
+  id                 String              @id @default(uuid()) @db.Uuid
+  userId             String              @map("user_id") @db.Uuid
+  platform           AdPlatform
+  connectedAccountId String?             @map("connected_account_id") @db.Uuid
+  name               String
+  objective          String?
+  budgetType         BudgetType          @default(DAILY) @map("budget_type")
+  budgetAmount       Decimal             @default(0) @map("budget_amount") @db.Decimal(12, 2)
+  geoJson            Json?               @map("geo_json")
+  ageMin             Int?                @map("age_min")
+  ageMax             Int?                @map("age_max")
+  gender             String?
+  placementsJson     Json?               @map("placements_json")
+  destinationUrl     String?             @map("destination_url")
+  utmJson            Json?               @map("utm_json")
+  primaryText        String?             @map("primary_text")
+  headline           String?
+  description        String?
+  cta                String?
+  providerPageId     String?             @map("provider_page_id")
+  providerWhatsAppNumber String?         @map("provider_whatsapp_number")
+  pixelId            String?             @map("pixel_id")
+  welcomeMessage     String?             @map("welcome_message")
+  providerPostId     String?             @map("provider_post_id")
+  status             DraftStatus         @default(DRAFT)
+  validationErrors   Json?               @map("validation_errors_json")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connectedAccount   AdConnectedAccount? @relation(fields: [connectedAccountId], references: [id])
+  remoteMapping      AdRemoteMapping?
+  assets             AdAsset[]           @relation("AdDraftToAsset")
+
+  @@map("ad_drafts")
+}
+
+enum BudgetType {
+  DAILY
+  LIFETIME
+}
+
+model AdRemoteMapping {
+  id                 String       @id @default(uuid()) @db.Uuid
+  draftId            String       @unique @map("draft_id") @db.Uuid
+  providerCampaignId String?      @map("provider_campaign_id")
+  providerGroupId    String?      @map("provider_group_id")
+  providerAdId       String?      @map("provider_ad_id")
+  remoteStatus       RemoteStatus @default(UNKNOWN) @map("remote_status")
+  publishedAt        DateTime?    @map("published_at")
+  draft              AdDraft      @relation(fields: [draftId], references: [id], onDelete: Cascade)
+
+  @@map("ad_remote_mappings")
+}
+
+model AdMetricsDaily {
+  id                 String     @id @default(uuid()) @db.Uuid
+  date               DateTime   @db.Date
+  userId             String?    @map("user_id") @db.Uuid
+  platform           AdPlatform
+  providerCampaignId String     @map("provider_campaign_id")
+  spend              Decimal    @default(0) @db.Decimal(12, 2)
+  impressions        Int        @default(0)
+  clicks             Int        @default(0)
+  ctr                Decimal?   @db.Decimal(10, 4)
+  cpc                Decimal?   @db.Decimal(12, 2)
+  conversions        Int        @default(0)
+  cpa                Decimal?   @db.Decimal(12, 2)
+  roas               Decimal?   @db.Decimal(10, 4)
+
+  @@unique([date, platform, providerCampaignId])
+  @@map("ad_metrics_daily")
+}
+
+model AdJob {
+  id             String     @id @default(uuid()) @db.Uuid
+  userId         String?    @map("user_id") @db.Uuid
+  platform       AdPlatform
+  type           AdJobType
+  status         JobStatus  @default(QUEUED)
+  attempts       Int        @default(0)
+  nextRunAt      DateTime?  @map("next_run_at")
+  payload        Json?      @map("payload_json")
+  lastError      String?    @map("last_error")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+  idempotencyKey String?    @unique @map("idempotency_key")
+  lockedAt       DateTime?  @map("locked_at")
+  user           User?      @relation(fields: [userId], references: [id])
+
+  @@map("ad_jobs")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String?  @map("user_id") @db.Uuid
+  actorUserId  String?  @map("actor_user_id") @db.Uuid
+  action       String
+  entityType   String?  @map("entity_type")
+  entityId     String?  @map("entity_id")
+  payload      Json?    @map("payload_json")
+  createdAt    DateTime @default(now()) @map("created_at")
+  user         User?    @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// ─── Ads AI System ───────────────────────────────────────────────────────────
+
+enum CampaignStatus {
+  DRAFT
+  READY
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  PAUSED
+}
+
+model OpenAIConfig {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @unique @map("user_id") @db.Uuid
+  apiKeyEnc   String    @map("api_key_enc")
+  model       String    @default("gpt-4o")
+  isValid     Boolean   @default(false) @map("is_valid")
+  validatedAt DateTime? @map("validated_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("openai_configs")
+}
+
+model BusinessBrief {
+  id                String         @id @default(uuid()) @db.Uuid
+  userId            String         @map("user_id") @db.Uuid
+  name              String
+  industry          String
+  description       String         @db.Text
+  valueProposition  String         @map("value_proposition") @db.Text
+  painPoints        String[]       @map("pain_points")
+  interests         String[]
+  brandVoice        String         @map("brand_voice")
+  brandColors       String[]       @map("brand_colors")
+  visualStyle       String[]       @map("visual_style")
+  primaryObjective  String         @map("primary_objective")
+  mainCTA           String         @map("main_cta")
+  targetLocations   String[]       @map("target_locations")
+  keyMessages       String[]       @map("key_messages")
+  personalityTraits String[]       @map("personality_traits")
+  contentThemes     String[]       @map("content_themes")
+  engagementLevel   String?        @map("engagement_level")
+  rawAudioUrl       String?        @map("raw_audio_url")
+  isActive          Boolean        @default(true) @map("is_active")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaigns         AdCampaignV2[]
+
+  @@index([userId, isActive])
+  @@map("business_briefs")
+}
+
+model AdStrategy {
+  id            String         @id @default(uuid()) @db.Uuid
+  name          String
+  description   String?        @db.Text
+  platform      AdPlatform
+  objective     String
+  destination   String
+  mediaType     String         @map("media_type")
+  mediaCount    Int            @map("media_count")
+  minBudgetUSD  Float          @map("min_budget_usd")
+  advantageType String         @map("advantage_type")
+  isGlobal      Boolean        @default(true) @map("is_global")
+  userId        String?        @map("user_id") @db.Uuid
+  sortOrder     Int            @default(0) @map("sort_order")
+  isActive      Boolean        @default(true) @map("is_active")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  campaigns     AdCampaignV2[]
+
+  @@index([platform, isActive])
+  @@map("ad_strategies")
+}
+
+model AdCampaignV2 {
+  id                 String              @id @default(uuid()) @db.Uuid
+  userId             String              @map("user_id") @db.Uuid
+  briefId            String              @map("brief_id") @db.Uuid
+  strategyId         String              @map("strategy_id") @db.Uuid
+  connectedAccountId String?             @map("connected_account_id") @db.Uuid
+  platform           AdPlatform
+  name               String
+  status             CampaignStatus      @default(DRAFT)
+  dailyBudgetUSD     Float               @default(0) @map("daily_budget_usd")
+  locations          String[]
+  pageId             String?             @map("page_id")
+  whatsappNumber     String?             @map("whatsapp_number")
+  pixelId            String?             @map("pixel_id")
+  destinationUrl     String?             @map("destination_url")
+  providerCampaignId String?             @map("provider_campaign_id")
+  providerGroupId    String?             @map("provider_group_id")
+  providerAdId       String?             @map("provider_ad_id")
+  failureReason      String?             @map("failure_reason") @db.Text
+  publishedAt        DateTime?           @map("published_at")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brief              BusinessBrief       @relation(fields: [briefId], references: [id])
+  strategy           AdStrategy          @relation(fields: [strategyId], references: [id])
+  connectedAccount   AdConnectedAccount? @relation(fields: [connectedAccountId], references: [id])
+  creatives          AdCreative[]
+
+  @@index([userId, status])
+  @@map("ad_campaigns_v2")
+}
+
+model AdCreative {
+  id          String       @id @default(uuid()) @db.Uuid
+  campaignId  String       @map("campaign_id") @db.Uuid
+  slotIndex   Int          @map("slot_index")
+  primaryText String       @map("primary_text") @db.Text
+  headline    String
+  description String?      @db.Text
+  hook        String?      @db.Text
+  mediaUrl    String?      @map("media_url")
+  mediaType   String?      @map("media_type")
+  aiGenerated Boolean      @default(false) @map("ai_generated")
+  isApproved  Boolean      @default(false) @map("is_approved")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  campaign    AdCampaignV2 @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@map("ad_creatives")
+}
+
+// ─── Admin & Commerce Models ──────────────────────────────────────────────────
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+model PackPurchaseRequest {
+  id              String        @id @default(uuid()) @db.Uuid
+  userId          String        @map("user_id") @db.Uuid
+  plan            UserPlan
+  price           Decimal       @db.Decimal(10, 2)
+  paymentProofUrl String?       @map("payment_proof_url")
+  status          RequestStatus @default(PENDING)
+  notes           String?
+  reviewedBy      String?       @map("reviewed_by") @db.Uuid
+  reviewedAt      DateTime?     @map("reviewed_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  user            User          @relation(fields: [userId], references: [id])
+
+  @@map("pack_purchase_requests")
+}
+
+model WithdrawalRequest {
+  id            String        @id @default(uuid()) @db.Uuid
+  userId        String        @map("user_id") @db.Uuid
+  amount        Decimal       @db.Decimal(12, 2)
+  walletQrUrl   String?       @map("wallet_qr_url")
+  walletAddress String?       @map("wallet_address")
+  proofUrl      String?       @map("proof_url")
+  status        RequestStatus @default(PENDING)
+  notes         String?
+  reviewedBy    String?       @map("reviewed_by") @db.Uuid
+  reviewedAt    DateTime?     @map("reviewed_at")
+  paidAt        DateTime?     @map("paid_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  user          User          @relation(fields: [userId], references: [id])
+
+  @@map("withdrawal_requests")
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}

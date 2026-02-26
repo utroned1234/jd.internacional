@@ -1,0 +1,259 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import {
+    Save,
+    Plus,
+    Smartphone,
+    Monitor,
+    Layout,
+    ArrowLeft,
+    Loader2,
+    Globe,
+    Users,
+    Type,
+    Activity,
+    ChevronRight,
+    Eye,
+    ChevronUp,
+    ChevronDown,
+    Trash
+} from 'lucide-react'
+import { BlocksRenderer, BlockData } from '@/components/landing-pages/Blocks'
+import Link from 'next/link'
+
+// Placeholder for Glow component if not imported.
+// In a real project, this would likely be a separate component file.
+const Glow = ({ color, className, opacity }: { color: string, className?: string, opacity?: number }) => (
+    <div
+        className={`absolute w-96 h-96 rounded-full filter blur-3xl ${className}`}
+        style={{ background: color, opacity: opacity || 0.1 }}
+    />
+);
+
+export default function LandingEditor({ params }: { params: { id: string } }) {
+    const router = useRouter()
+    const [page, setPage] = useState<any>(null)
+    const [blocks, setBlocks] = useState<BlockData[]>([])
+    const [loading, setLoading] = useState(true)
+    const [saving, setSaving] = useState(false)
+    const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop')
+    const [showBlockPicker, setShowBlockPicker] = useState(false)
+
+    useEffect(() => {
+        fetchPage()
+    }, [])
+
+    const fetchPage = async () => {
+        try {
+            const res = await fetch(`/api/landing-pages/${params.id}`)
+            const data = await res.json()
+            if (data.page) {
+                setPage(data.page)
+                setBlocks(data.page.sections || [])
+            }
+        } catch (error) {
+            console.error('Error fetching page:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleSave = async () => {
+        setSaving(true)
+        try {
+            await fetch(`/api/landing-pages/${params.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sections: blocks })
+            })
+            alert('¡Página publicada con éxito!')
+        } catch (error) {
+            alert('Error al guardar')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const getInitialContent = (type: string) => {
+        switch (type) {
+            case 'hero': return { badge: 'NUEVO LANZAMIENTO', title: 'ESCALE SU NEGOCIO AL NIVEL PRO', subtitle: 'La plataforma definitiva para emprendedores que buscan resultados reales sin complicaciones técnicas.', buttonText: 'COMENZAR AHORA', image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800', videoId: '' }
+            case 'logos': return { logos: [] }
+            case 'features': return { title: 'Diferencial Pro', items: [{ title: 'Automatización', description: 'Sistemas inteligentes que trabajan mientras duermes.' }, { title: 'Escalabilidad', description: 'Crece sin límites con nuestra infraestructura global.' }, { title: 'Conversión', description: 'Diseños probados para capturar la máxima atención.' }] }
+            case 'team': return { title: 'Nuestro Equipo de Expertos', members: [{ name: 'Luke Alexander', role: 'Founder & CEO', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200', rev: '$510K', rating: '5.0', location: 'San Diego, USA' }] }
+            case 'pricing': return { title: 'Inversión Inteligente', subtitle: 'Sin cargos ocultos. Transparencia total en cada paso.', tiers: [{ name: 'Starter', price: '49', features: ['Acceso básico', '1 Bot activo', 'Soporte email'], buttonText: 'Elegir Plan' }, { name: 'Empresa', price: '199', featured: true, features: ['Acceso total', 'Bots ilimitados', 'Soporte prioritario 24/7'], buttonText: 'Activar Pro' }] }
+            case 'faq': return { title: 'Dudas Comunes', items: [{ question: '¿Cómo funciona el sistema?' }, { question: '¿Necesito conocimientos previos?' }, { question: '¿Puedo cancelar en cualquier momento?' }] }
+            default: return {}
+        }
+    }
+
+    const updateBlock = (id: string, field: string, value: any) => {
+        if (field === 'delete') {
+            setBlocks(blocks.filter(b => b.id !== id))
+            return
+        }
+
+        if (field === 'moveUp') {
+            const idx = blocks.findIndex(b => b.id === id)
+            if (idx > 0) {
+                const newBlocks = [...blocks]
+                    ;[newBlocks[idx - 1], newBlocks[idx]] = [newBlocks[idx], newBlocks[idx - 1]]
+                setBlocks(newBlocks)
+            }
+            return
+        }
+
+        if (field === 'moveDown') {
+            const idx = blocks.findIndex(b => b.id === id)
+            if (idx < blocks.length - 1) {
+                const newBlocks = [...blocks]
+                    ;[newBlocks[idx], newBlocks[idx + 1]] = [newBlocks[idx + 1], newBlocks[idx]]
+                setBlocks(newBlocks)
+            }
+            return
+        }
+
+        if (field === 'add_after') {
+            const idx = blocks.findIndex(b => b.id === id)
+            setShowBlockPicker(true)
+                // Guardamos temporalmente el índice para insertar el nuevo bloque después
+                ; (window as any)._insertAfterIndex = idx
+            return
+        }
+
+        setBlocks(blocks.map(b => b.id === id ? { ...b, content: { ...b.content, [field]: value } } : b))
+    }
+
+    // Modificamos addBlock para soportar inserción
+    const addBlock = (type: string) => {
+        const newBlock: BlockData = {
+            id: Math.random().toString(36).substr(2, 9),
+            type,
+            content: getInitialContent(type),
+            styles: { accentColor: '#00FF88', layout: 'center' }
+        }
+
+        const insertIdx = (window as any)._insertAfterIndex
+        if (typeof insertIdx === 'number') {
+            const newBlocks = [...blocks]
+            newBlocks.splice(insertIdx + 1, 0, newBlock)
+            setBlocks(newBlocks)
+            delete (window as any)._insertAfterIndex
+        } else {
+            setBlocks([...blocks, newBlock])
+        }
+
+        setShowBlockPicker(false)
+    }
+
+    if (loading) return (
+        <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050505] text-white">
+            <Loader2 className="w-12 h-12 text-[#00FF88] animate-spin mb-4" />
+            <span className="font-black tracking-widest text-[#00FF88] uppercase text-xs">Cargando Software Pro...</span>
+        </div>
+    )
+
+    return (
+        <div className="h-screen w-full flex flex-col bg-[#050505] overflow-hidden text-white font-inter">
+            {/* Top Bar - Clean & Pro */}
+            <nav className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-black/50 backdrop-blur-2xl z-[100] fixed top-0 w-full">
+                <div className="flex items-center gap-6">
+                    <Link href="/dashboard/services/landing-pages" className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all">
+                        <ArrowLeft size={20} />
+                    </Link>
+                    <div>
+                        <h1 className="text-lg font-black tracking-tighter uppercase">{page?.name}</h1>
+                        <p className="text-[10px] text-[#00FF88] font-black uppercase tracking-widest">Editor Visual Pro</p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-6">
+                    <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-md">
+                        <button
+                            onClick={() => setPreviewMode('desktop')}
+                            className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-xs font-bold uppercase ${previewMode === 'desktop' ? 'bg-white text-black shadow-2xl scale-105' : 'text-white/40 hover:text-white'}`}
+                        >
+                            <Monitor size={16} /> Desktop
+                        </button>
+                        <button
+                            onClick={() => setPreviewMode('mobile')}
+                            className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-xs font-bold uppercase ${previewMode === 'mobile' ? 'bg-white text-black shadow-2xl scale-105' : 'text-white/40 hover:text-white'}`}
+                        >
+                            <Smartphone size={16} /> Mobile
+                        </button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <a href={`/lp/${page?.slug}`} target="_blank" className="p-3 rounded-xl border border-white/10 hover:bg-white/5 transition-all">
+                            <Eye size={20} />
+                        </a>
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="bg-[#00FF88] hover:bg-[#00FF88]/90 text-black px-8 py-3 rounded-full font-black text-xs uppercase tracking-widest transition-all shadow-[0_0_40px_rgba(0,255,136,0.3)] flex items-center gap-2 disabled:opacity-50"
+                        >
+                            {saving ? <Loader2 size={16} className="animate-spin" /> : <Globe size={16} />}
+                            Publicar Página
+                        </button>
+                    </div>
+                </div>
+            </nav>
+
+            {/* Main Canvas Area */}
+            <main className="flex-1 mt-20 overflow-y-auto bg-[#050505] flex justify-center p-8 scrollbar-hide">
+                <div className={`transition-all duration-700 relative ${previewMode === 'desktop' ? 'w-full max-w-[1440px]' : 'w-[375px] h-[812px] rounded-[3rem] border-[12px] border-white/5 shadow-[0_0_100px_rgba(0,0,0,0.8)] overflow-hidden scale-90 mt-[-5%]'
+                    }`}>
+                    <div className={`h-full ${previewMode === 'mobile' ? 'overflow-y-auto scrollbar-hide' : ''}`}>
+                        <div className="relative pb-40">
+                            <BlocksRenderer blocks={blocks} isEditing={true} onEdit={updateBlock} />
+                            {/* Eliminamos el botón de añadir bloque y el estado vacío para centrarnos en el template */}
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            {/* Block Picker Overlay */}
+            {showBlockPicker && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 animate-in fade-in duration-300">
+                    <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => setShowBlockPicker(false)} />
+                    <div className="relative bg-dark-900 border border-white/10 w-full max-w-4xl rounded-[40px] p-12 overflow-hidden shadow-[0_0_100px_rgba(0,255,136,0.1)]">
+                        <Glow color="#00FF88" className="-top-40 -left-40" opacity={0.1} />
+                        <h2 className="text-3xl font-black uppercase tracking-tighter mb-12 flex items-center gap-4">
+                            <div className="w-10 h-1 bg-[#00FF88] rounded-full" />
+                            Biblioteca de Bloques Pro
+                        </h2>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {[
+                                { type: 'hero', icon: Layout, label: 'Hero / Cabecera', desc: 'Título masivo y video de fondo' },
+                                { type: 'logos', icon: Globe, label: 'Trust / Logos', desc: 'Marcas que confían en ti' },
+                                { type: 'features', icon: Activity, label: 'Beneficios', desc: 'Diseño Glassmorphism elite' },
+                                { type: 'team', icon: Users, label: 'Experiencia / Team', desc: 'Muestra a tus expertos' },
+                                { type: 'pricing', icon: Type, label: 'Precios / Offers', desc: 'Tablas de alta conversión' },
+                                { type: 'faq', icon: ChevronRight, label: 'FAQs / Dudas', desc: 'Información clara y pro' },
+                            ].map((b) => (
+                                <button
+                                    key={b.type}
+                                    onClick={() => addBlock(b.type)}
+                                    className="bg-white/5 border border-white/10 p-8 rounded-[32px] text-left hover:bg-[#00FF88] hover:text-black transition-all group hover:-translate-y-2"
+                                >
+                                    <b.icon className="w-10 h-10 mb-6 group-hover:scale-110 transition-transform" />
+                                    <h4 className="text-lg font-black uppercase m-0">{b.label}</h4>
+                                    <p className="text-xs opacity-40 group-hover:opacity-100 mt-2 font-medium">{b.desc}</p>
+                                </button>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={() => setShowBlockPicker(false)}
+                            className="absolute top-8 right-8 text-white/20 hover:text-white transition-colors"
+                        >
+                            <Plus size={32} className="rotate-45" />
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}

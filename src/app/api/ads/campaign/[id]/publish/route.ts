@@ -1,0 +1,178 @@
+import { NextResponse } from 'next/server'
+import { getAuthUser } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { decrypt } from '@/lib/ads/encryption'
+import { AdapterFactory } from '@/lib/ads/factory'
+import { supabaseAdmin } from '@/lib/supabase'
+
+const BUCKET = 'ad-creatives'
+
+const ENC_KEY = process.env.ADS_ENCRYPTION_KEY || ''
+
+export async function POST(req: Request, { params }: { params: { id: string } }) {
+    const user = await getAuthUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const campaign = await (prisma as any).adCampaignV2.findFirst({
+        where: { id: params.id, userId: user.id },
+        include: {
+            brief: true,
+            strategy: true,
+            connectedAccount: {
+                include: { integration: { include: { token: true } } }
+            },
+            creatives: { orderBy: { slotIndex: 'asc' } }
+        }
+    })
+
+    if (!campaign) return NextResponse.json({ error: 'Campaña no encontrada' }, { status: 404 })
+    if (campaign.status === 'PUBLISHED') {
+        return NextResponse.json({ error: 'Esta campaña ya fue publicada' }, { status: 400 })
+    }
+    if (!campaign.connectedAccount) {
+        return NextResponse.json({ error: 'Selecciona una cuenta publicitaria primero' }, { status: 400 })
+    }
+    if (!campaign.connectedAccount.integration?.token) {
+        return NextResponse.json({ error: 'Reconecta tu cuenta de Meta/TikTok/Google' }, { status: 400 })
+    }
+
+    // Validate required fields per destination
+    const dest = campaign.strategy.destination
+    // All Meta campaigns require a Facebook page to create ad creatives
+    if (campaign.platform === 'META' && !campaign.pageId) {
+        return NextResponse.json({ error: 'Selecciona una Página de Facebook. Es obligatoria para todos los anuncios de Meta.' }, { status: 400 })
+    }
+    if (dest === 'whatsapp' && !campaign.whatsappNumber) {
+        return NextResponse.json({ error: 'Selecciona un número de WhatsApp Business para esta campaña' }, { status: 400 })
+    }
+    if (['website'].includes(dest) && !campaign.destinationUrl) {
+        return NextResponse.json({ error: 'Ingresa la URL de destino para esta campaña' }, { status: 400 })
+    }
+
+    // Mark as publishing
+    await (prisma as any).adCampaignV2.update({
+        where: { id: params.id },
+        data: { status: 'PUBLISHING' }
+    })
+
+    try {
+        const adapter = AdapterFactory.getAdapter(campaign.platform)
+        const accessToken = decrypt(campaign.connectedAccount.integration.token.accessTokenEncrypted, ENC_KEY)
+
+        // FIX: Map all strategy objectives to correct Meta OUTCOME_* values
+        const objectiveMap: Record<string, string> = {
+            conversions: 'OUTCOME_SALES',
+            leads: 'OUTCOME_LEADS',
+            traffic: 'OUTCOME_TRAFFIC',
+            awareness: 'OUTCOME_AWARENESS'
+        }
+        const metaObjective = objectiveMap[campaign.strategy.objective] || 'OUTCOME_TRAFFIC'
+
+        const geoLocations = campaign.locations.length > 0
+            ? { countries: campaign.locations.map((l: string) => l.toUpperCase()).filter((l: string) => l.length === 2) }
+            : undefined
+
+        // FIX: pass all creative copies so the adapter creates one ad per variation
+        const creativeCopies = campaign.creatives
+            .filter((c: any) => c.primaryText)
+            .map((c: any) => ({
+                primaryText: c.primaryText || '',
+                headline: c.headline || '',
+                description: c.description || '',
+                imageUrl: c.mediaUrl || undefined
+            }))
+
+        const messengerDestination = dest === 'whatsapp'
+            ? 'WHATSAPP' as const
+            : dest === 'messenger'
+                ? 'MESSENGER' as const
+                : dest === 'instagram'
+                    ? 'INSTAGRAM' as const
+                    : undefined
+
+        const result = await adapter.publishFromDraft(
+            accessToken,
+            campaign.connectedAccount.providerAccountId,
+            {
+                name: campaign.name,
+                objective: metaObjective,
+                budgetType: 'DAILY',
+                budgetAmount: campaign.dailyBudgetUSD,
+                geoLocations,
+                // Fallback single-copy fields (used if copies array is empty)
+                primaryText: campaign.creatives[0]?.primaryText || campaign.brief.description,
+                headline: campaign.creatives[0]?.headline || campaign.brief.name,
+                description: campaign.creatives[0]?.description || campaign.brief.valueProposition,
+                cta: campaign.brief.mainCTA === 'Comprar ahora' ? 'SHOP_NOW' : 'LEARN_MORE',
+                providerPageId: campaign.pageId || undefined,
+                providerWhatsAppNumber: campaign.whatsappNumber || undefined,
+                pixelId: campaign.pixelId || undefined,
+                destinationUrl: campaign.destinationUrl || undefined,
+                messengerDestination,
+                // Multi-copy: creates one ad per variation
+                copies: creativeCopies.length > 0 ? creativeCopies : undefined,
+                assets: campaign.creatives
+                    .filter((c: any) => c.mediaUrl)
+                    .map((c: any) => ({
+                        type: (c.mediaType?.toUpperCase() || 'IMAGE') as 'IMAGE' | 'VIDEO',
+                        storageUrl: c.mediaUrl!
+                    }))
+            }
+        )
+
+        await (prisma as any).adCampaignV2.update({
+            where: { id: params.id },
+            data: {
+                status: 'PUBLISHED',
+                providerCampaignId: result.providerCampaignId,
+                providerGroupId: result.providerGroupId || null,
+                providerAdId: result.providerAdId || null,
+                publishedAt: new Date()
+            }
+        })
+
+        // Delete uploaded media from Supabase Storage (files are temporary)
+        const storageUrlMarker = `/object/public/${BUCKET}/`
+        const storagePaths = campaign.creatives
+            .filter((c: any) => c.mediaUrl?.includes(storageUrlMarker))
+            .map((c: any) => {
+                const idx = c.mediaUrl.indexOf(storageUrlMarker)
+                return c.mediaUrl.slice(idx + storageUrlMarker.length)
+            })
+
+        if (storagePaths.length > 0) {
+            await supabaseAdmin.storage.from(BUCKET).remove(storagePaths)
+            await (prisma as any).adCreative.updateMany({
+                where: { campaignId: params.id },
+                data: { mediaUrl: null }
+            })
+        }
+
+        return NextResponse.json({ success: true, result })
+    } catch (err: any) {
+        console.error('[PublishCampaign]', err)
+
+        // Make Meta errors more actionable
+        let userMessage = err.message || 'Error al publicar la campaña'
+        const msg = userMessage.toLowerCase()
+        if (msg.includes('whatsapp') && msg.includes('personal')) {
+            userMessage = 'Tu página tiene un WhatsApp personal vinculado. Para anuncios de WhatsApp necesitas una cuenta de WhatsApp Business. Ve a Configuración de la Página → WhatsApp y vincula tu número de WhatsApp Business.'
+        } else if (msg.includes('whatsapp') && msg.includes('business')) {
+            userMessage = 'Conecta una cuenta de WhatsApp Business a tu Página de Facebook antes de publicar este anuncio. Ve a Configuración de la Página → WhatsApp.'
+        } else if (msg.includes('método de pago') || msg.includes('payment')) {
+            userMessage = 'Tu cuenta publicitaria no tiene un método de pago válido. Agrega un método de pago en el Administrador de Anuncios de Meta.'
+        } else if (msg.includes('permiso') || msg.includes('permission') || msg.includes('autorización')) {
+            userMessage = 'Sin permisos suficientes. Reconecta tu cuenta de Meta desde la sección de Integraciones.'
+        }
+
+        await (prisma as any).adCampaignV2.update({
+            where: { id: params.id },
+            data: {
+                status: 'FAILED',
+                failureReason: userMessage
+            }
+        })
+
+        return NextResponse.json({ error: userMessage }, { status: 500 })
+    }
+}

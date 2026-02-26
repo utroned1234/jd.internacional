@@ -1,0 +1,95 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
+import { prisma } from '@/lib/prisma'
+import { verifyToken } from '@/lib/auth'
+
+function getAuth() {
+  const cookieStore = cookies()
+  const token = cookieStore.get('auth_token')?.value
+  if (!token) return null
+  return verifyToken(token)
+}
+
+/** GET /api/bots/[botId] – fetch single bot with webhook info */
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: { botId: string } },
+) {
+  const auth = getAuth()
+  if (!auth) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const bot = await prisma.bot.findFirst({
+    where: { id: params.botId, userId: auth.userId },
+    include: {
+      secret: {
+        select: { whatsappInstanceNumber: true, reportPhone: true },
+      },
+      _count: { select: { products: true, conversations: true } },
+    },
+  })
+
+  if (!bot) return NextResponse.json({ error: 'Bot no encontrado' }, { status: 404 })
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tu-dominio.com'
+  const webhookUrl = `${appUrl}/api/webhooks/ycloud/whatsapp/${bot.id}?token=${bot.webhookToken}`
+
+  return NextResponse.json({ bot, webhookUrl })
+}
+
+/** PATCH /api/bots/[botId] – update bot settings */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { botId: string } },
+) {
+  const auth = getAuth()
+  if (!auth) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const bot = await prisma.bot.findFirst({
+    where: { id: params.botId, userId: auth.userId },
+  })
+  if (!bot) return NextResponse.json({ error: 'Bot no encontrado' }, { status: 404 })
+
+  const body = await request.json()
+  const { name, status, systemPromptTemplate, maxCharsMensaje1, maxCharsMensaje2, maxCharsMensaje3, followUp1Delay, followUp2Delay } =
+    body as Record<string, unknown>
+
+  const updated = await prisma.bot.update({
+    where: { id: params.botId },
+    data: {
+      ...(typeof name === 'string' && name.trim() ? { name: name.trim() } : {}),
+      ...(status === 'ACTIVE' || status === 'PAUSED' ? { status } : {}),
+      ...(typeof systemPromptTemplate === 'string' ? { systemPromptTemplate } : {}),
+      ...(typeof maxCharsMensaje1 === 'number' || maxCharsMensaje1 === null
+        ? { maxCharsMensaje1: maxCharsMensaje1 as number | null }
+        : {}),
+      ...(typeof maxCharsMensaje2 === 'number' || maxCharsMensaje2 === null
+        ? { maxCharsMensaje2: maxCharsMensaje2 as number | null }
+        : {}),
+      ...(typeof maxCharsMensaje3 === 'number' || maxCharsMensaje3 === null
+        ? { maxCharsMensaje3: maxCharsMensaje3 as number | null }
+        : {}),
+      ...(typeof followUp1Delay === 'number' ? { followUp1Delay } : {}),
+      ...(typeof followUp2Delay === 'number' ? { followUp2Delay } : {}),
+    },
+  })
+
+  return NextResponse.json({ bot: updated })
+}
+
+/** DELETE /api/bots/[botId] – remove bot and all related data */
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: { botId: string } },
+) {
+  const auth = getAuth()
+  if (!auth) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const bot = await prisma.bot.findFirst({
+    where: { id: params.botId, userId: auth.userId },
+  })
+  if (!bot) return NextResponse.json({ error: 'Bot no encontrado' }, { status: 404 })
+
+  await prisma.bot.delete({ where: { id: params.botId } })
+
+  return NextResponse.json({ ok: true })
+}

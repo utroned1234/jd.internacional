@@ -1,0 +1,335 @@
+'use client'
+
+import React, { useState } from 'react'
+import { X, ShoppingCart, Trash2, Minus, Plus, MessageCircle, MapPin, User, Phone, ClipboardList, Wallet, Banknote, QrCode, Upload, CheckCircle2, Loader2 } from 'lucide-react'
+import { useCart } from './CartContext'
+
+export function CartDrawer({ isOpen, onClose, storeWhatsapp, paymentQrUrl, isMLM }: { isOpen: boolean, onClose: () => void, storeWhatsapp: string, paymentQrUrl?: string, isMLM?: boolean }) {
+    const { cart, removeFromCart, updateQuantity, totalPrice, totalPoints, clearCart } = useCart()
+    const [step, setStep] = useState<'ITEMS' | 'CHECKOUT'>('ITEMS')
+
+    // Form State
+    const [form, setForm] = useState({
+        name: '',
+        phone: '',
+        city: '',
+        street1: '',
+        street2: '',
+        houseNum: '',
+        instructions: '',
+        paymentMethod: 'CASH' as 'CASH' | 'QR',
+        proofUrl: ''
+    })
+    const [uploading, setUploading] = useState(false)
+
+    if (!isOpen) return null
+
+    const handleSendOrder = () => {
+        const productList = cart.map(i => `- ${i.quantity} x ${i.name} (${i.currency} ${i.price}) ${isMLM && i.points ? `[+${i.points * i.quantity} PV]` : ''}`).join('\n')
+        const fullProofUrl = form.proofUrl ? (form.proofUrl.startsWith('http') ? form.proofUrl : `${window.location.origin}${form.proofUrl}`) : ''
+
+        const pointsSection = (isMLM && totalPoints > 0) ? `\n✨ *PUNTOS PV TOTALES:* ${totalPoints} PV\n` : ''
+
+        const message = `🛍️ *NUEVO PEDIDO - JD INTERNACIONAL* 🛍️
+
+*DATOS DE ENTREGA:*
+👤 *Nombre:* ${form.name}
+📞 *Teléfono:* ${form.phone}
+🏙️ *Ciudad:* ${form.city}
+📍 *Dirección:* ${form.street1}
+🗺️ *Entre calle:* ${form.street2}
+🏠 *Nro:* ${form.houseNum || 'N/A'}
+📝 *Instrucciones:* ${form.instructions || 'Ninguna'}
+
+*MÉTODO DE PAGO:* ${form.paymentMethod === 'CASH' ? '💵 Efectivo' : '🏦 Transferencia / QR'}
+${fullProofUrl ? `📄 *Comprobante:* ${fullProofUrl}` : ''}
+
+*PRODUCTOS:*
+${productList}
+${pointsSection}
+*TOTAL:* ${cart[0]?.currency || '$'} ${totalPrice.toLocaleString()}
+
+¡Hola! He completado mi pedido. ${form.paymentMethod === 'QR' ? 'Ya realicé la transferencia.' : 'Pagaré al recibir.'} ¿Cómo procedemos?`
+
+        const link = `https://wa.me/${storeWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
+        window.open(link, '_blank')
+
+        // Simulación: Limpiar el comprobante tras el envío
+        setForm(prev => ({ ...prev, proofUrl: '' }))
+    }
+
+    return (
+        <div className="fixed inset-0 z-[100] flex justify-end">
+            <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={onClose} />
+
+            <div className="relative w-full max-w-md bg-white h-screen shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                {/* Header */}
+                <div className="p-6 border-b-2 border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-slate-950 text-white rounded-xl flex items-center justify-center">
+                            <ShoppingCart size={20} />
+                        </div>
+                        <h2 className="text-xl font-black text-slate-900 tracking-tight">Mi Carrito</h2>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors">
+                        <X size={24} className="text-slate-400" />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-6 py-8 custom-scrollbar">
+                    {cart.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
+                            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
+                                <ShoppingCart size={40} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900">Carrito vacío</h3>
+                                <p className="text-sm text-slate-400">Aún no has añadido nada a tu pedido.</p>
+                            </div>
+                        </div>
+                    ) : step === 'ITEMS' ? (
+                        <div className="space-y-6">
+                            {cart.map(item => (
+                                <div key={item.id} className="flex gap-4 p-4 bg-slate-50/50 rounded-[24px] border-2 border-slate-100 group">
+                                    <div className="w-20 h-20 bg-white rounded-2xl overflow-hidden border-2 border-slate-100 flex-shrink-0">
+                                        {item.image ? (
+                                            <img src={item.image} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-slate-100"><ShoppingCart /></div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-bold text-slate-900 text-sm mb-1 truncate">{item.name}</h4>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <p className="text-xs font-black text-slate-400">{item.currency} {item.price.toLocaleString()}</p>
+                                            {isMLM && item.points ? (
+                                                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                                                    +{item.points * item.quantity} PV
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 bg-white rounded-lg p-1 border-2 border-slate-200">
+                                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-1 hover:text-blue-600"><Minus size={14} /></button>
+                                                <span className="text-xs font-black w-4 text-center">{item.quantity}</span>
+                                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-1 hover:text-blue-600"><Plus size={14} /></button>
+                                            </div>
+                                            <button onClick={() => removeFromCart(item.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="space-y-6 animate-in fade-in duration-500">
+                            <div className="space-y-4">
+                                <h3 className="text-xs font-black text-slate-950 uppercase tracking-widest flex items-center gap-2">
+                                    <User size={14} /> Datos de Cliente
+                                </h3>
+                                <input
+                                    placeholder="Nombre completo"
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-slate-950 transition-all outline-none"
+                                    value={form.name}
+                                    onChange={e => setForm({ ...form, name: e.target.value })}
+                                />
+                                <input
+                                    placeholder="Número de teléfono"
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-slate-950 transition-all outline-none"
+                                    value={form.phone}
+                                    onChange={e => setForm({ ...form, phone: e.target.value })}
+                                />
+                                <input
+                                    placeholder="Ciudad / Localidad"
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-slate-950 transition-all outline-none"
+                                    value={form.city}
+                                    onChange={e => setForm({ ...form, city: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="space-y-4">
+                                <h3 className="text-xs font-black text-slate-950 uppercase tracking-widest flex items-center gap-2">
+                                    <MapPin size={14} /> Dirección de Envío
+                                </h3>
+                                <input
+                                    placeholder="Calle 1 / Dirección Principal"
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-slate-950 transition-all outline-none"
+                                    value={form.street1}
+                                    onChange={e => setForm({ ...form, street1: e.target.value })}
+                                />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input
+                                        placeholder="Entre calle 2"
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-slate-950 transition-all outline-none"
+                                        value={form.street2}
+                                        onChange={e => setForm({ ...form, street2: e.target.value })}
+                                    />
+                                    <input
+                                        placeholder="Nro Casa (Opcional)"
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-slate-950 transition-all outline-none"
+                                        value={form.houseNum}
+                                        onChange={e => setForm({ ...form, houseNum: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h3 className="text-xs font-black text-slate-950 uppercase tracking-widest flex items-center gap-2">
+                                    <ClipboardList size={14} /> Instrucciones para Repartidor
+                                </h3>
+                                <textarea
+                                    placeholder="Ej: Tocar timbre fuerte, dejar en portería, etc."
+                                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-slate-950 transition-all outline-none h-24 resize-none"
+                                    value={form.instructions}
+                                    onChange={e => setForm({ ...form, instructions: e.target.value })}
+                                />
+                            </div>
+
+                            {/* Payment Selection */}
+                            <div className="space-y-4">
+                                <h3 className="text-xs font-black text-slate-950 uppercase tracking-widest flex items-center gap-2">
+                                    <Wallet size={14} /> Método de Pago
+                                </h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setForm({ ...form, paymentMethod: 'CASH' })}
+                                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${form.paymentMethod === 'CASH'
+                                            ? 'border-slate-950 bg-slate-950 text-white shadow-lg'
+                                            : 'border-slate-100 bg-slate-50 text-slate-400'
+                                            }`}
+                                    >
+                                        <Banknote size={20} />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Efectivo</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setForm({ ...form, paymentMethod: 'QR' })}
+                                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${form.paymentMethod === 'QR'
+                                            ? 'border-slate-950 bg-slate-950 text-white shadow-lg'
+                                            : 'border-slate-100 bg-slate-50 text-slate-400'
+                                            }`}
+                                    >
+                                        <QrCode size={20} />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">QR / Transf.</span>
+                                    </button>
+                                </div>
+
+                                {form.paymentMethod === 'QR' && (
+                                    <div className="p-6 bg-slate-900 rounded-[32px] text-white space-y-6 animate-in slide-in-from-bottom duration-500">
+                                        {paymentQrUrl ? (
+                                            <div className="space-y-4 text-center">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Escanea para pagar</p>
+                                                <div className="bg-white p-4 rounded-3xl inline-block shadow-2xl">
+                                                    <img src={paymentQrUrl} className="w-48 h-48 object-contain" />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-4">
+                                                <p className="text-xs text-slate-400">Solicita los datos de transferencia por WhatsApp.</p>
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-3">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Sube tu comprobante</p>
+                                            {form.proofUrl ? (
+                                                <div className="flex items-center justify-center gap-2 text-green-400 py-3 bg-white/5 rounded-2xl border border-green-400/20">
+                                                    <CheckCircle2 size={16} />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">¡Comprobante Listo!</span>
+                                                    <button onClick={() => setForm({ ...form, proofUrl: '' })} className="text-white hover:text-red-400 ml-2">
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="relative group">
+                                                    <input
+                                                        type="file"
+                                                        onChange={async (e) => {
+                                                            const file = e.target.files?.[0]
+                                                            if (!file) return
+                                                            setUploading(true)
+                                                            const formData = new FormData()
+                                                            formData.append('file', file)
+                                                            try {
+                                                                const res = await fetch('/api/upload', { method: 'POST', body: formData })
+                                                                const data = await res.json()
+                                                                if (res.ok) setForm({ ...form, proofUrl: data.url })
+                                                                else alert(data.error)
+                                                            } catch (err) { alert('Error al subir comprobante') }
+                                                            finally { setUploading(false) }
+                                                        }}
+                                                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                                        accept="image/*"
+                                                    />
+                                                    <div className="w-full py-4 bg-white/10 hover:bg-white/20 border border-white/10 border-dashed rounded-2xl flex flex-col items-center gap-2 transition-all">
+                                                        {uploading ? (
+                                                            <Loader2 size={24} className="animate-spin text-slate-400" />
+                                                        ) : (
+                                                            <>
+                                                                <Upload size={20} className="text-slate-400" />
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 underline">Elegir Imagen</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {cart.length > 0 && (
+                    <div className="p-6 bg-white border-t border-slate-100 space-y-4">
+                        <div className="flex flex-col gap-1">
+                            {isMLM && totalPoints > 0 && (
+                                <div className="flex items-center justify-between text-blue-600 mb-2 bg-blue-50/50 p-3 rounded-2xl border border-blue-100/50">
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Puntos PV Totales</span>
+                                    <span className="text-xl font-black">+{totalPoints} PV</span>
+                                </div>
+                            )}
+                            <div className="flex items-center justify-between text-slate-900 px-1">
+                                <span className="text-sm font-bold opacity-40 uppercase tracking-widest">Total Estimado</span>
+                                <span className="text-3xl font-black tracking-tighter">
+                                    {(cart[0]?.currency === 'PEN' ? 'S/' :
+                                        cart[0]?.currency === 'BOB' ? 'Bs' :
+                                            cart[0]?.currency === 'VES' ? 'Bs.S' :
+                                                cart[0]?.currency === 'EUR' ? '€' : '$')}
+                                    {totalPrice.toLocaleString()}
+                                </span>
+                            </div>
+                        </div>
+
+                        {step === 'ITEMS' ? (
+                            <button
+                                onClick={() => setStep('CHECKOUT')}
+                                className="w-full bg-slate-950 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
+                            >
+                                Continuar con el Pedido
+                            </button>
+                        ) : (
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    disabled={!form.name || !form.phone || !form.city || !form.street1}
+                                    onClick={handleSendOrder}
+                                    className="w-full bg-[#25D366] text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#20ba5a] transition-all shadow-xl shadow-green-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
+                                >
+                                    <MessageCircle size={18} /> Finalizar en WhatsApp
+                                </button>
+                                <button
+                                    onClick={() => setStep('ITEMS')}
+                                    className="text-xs font-black text-slate-400 uppercase tracking-widest py-2"
+                                >
+                                    Volver al Carrito
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
