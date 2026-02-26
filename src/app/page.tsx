@@ -1,142 +1,310 @@
 'use client'
 
 import Link from 'next/link'
-import { Network, TrendingUp, Zap, Radio, Users, Globe, DollarSign } from 'lucide-react'
+import { Bot, TrendingUp, Megaphone, Store, Layers, ShieldCheck, Zap, Crown } from 'lucide-react'
+
+const FEATURES = [
+  {
+    icon: Bot,
+    title: 'Bots de WhatsApp con IA',
+    desc: 'Automatiza tus ventas 24/7 con bots inteligentes que atienden a tus clientes, muestran productos y cierran ventas mientras duermes.',
+    color: 'text-cyan-400',
+    bg: 'bg-cyan-500/8',
+    border: 'border-cyan-500/15',
+    glow: 'from-cyan-500/20',
+  },
+  {
+    icon: Megaphone,
+    title: 'Publicidad Digital con IA',
+    desc: 'Crea y lanza campañas en Meta, Google y TikTok Ads en minutos usando inteligencia artificial para maximizar resultados.',
+    color: 'text-pink-400',
+    bg: 'bg-pink-500/8',
+    border: 'border-pink-500/15',
+    glow: 'from-pink-500/20',
+  },
+  {
+    icon: Store,
+    title: 'Tienda Virtual Propia',
+    desc: 'Tu propia tienda online para vender productos con pasarela de pago integrada. Lista en minutos, sin conocimientos técnicos.',
+    color: 'text-yellow-400',
+    bg: 'bg-yellow-500/8',
+    border: 'border-yellow-500/15',
+    glow: 'from-yellow-500/20',
+  },
+  {
+    icon: Layers,
+    title: 'Landing Pages con IA',
+    desc: 'Genera páginas de ventas profesionales con inteligencia artificial. Capta leads y convierte visitas en clientes automáticamente.',
+    color: 'text-emerald-400',
+    bg: 'bg-emerald-500/8',
+    border: 'border-emerald-500/15',
+    glow: 'from-emerald-500/20',
+  },
+  {
+    icon: TrendingUp,
+    title: 'Panel de Comisiones',
+    desc: 'Visualiza tus ganancias en tiempo real, solicita retiros y gestiona tu billetera digital desde un solo lugar.',
+    color: 'text-blue-400',
+    bg: 'bg-blue-500/8',
+    border: 'border-blue-500/15',
+    glow: 'from-blue-500/20',
+  },
+]
+
+const PLANS = [
+  {
+    name: 'Pack Básico',
+    icon: Zap,
+    color: 'text-cyan-400',
+    border: 'border-cyan-500/20',
+    bg: 'bg-cyan-500/5',
+    features: ['1 Bot de WhatsApp', 'Catálogo 2 productos', '1 Tienda virtual', 'Capacitaciones Zoom'],
+  },
+  {
+    name: 'Pack Pro',
+    icon: TrendingUp,
+    color: 'text-purple-400',
+    border: 'border-purple-500/30',
+    bg: 'bg-purple-500/8',
+    popular: true,
+    features: ['2 Bots personalizados', 'Catálogo 20 productos', 'Publicidad Meta / TikTok / Google', 'Landing Pages con IA'],
+  },
+  {
+    name: 'Pack Elite',
+    icon: Crown,
+    color: 'text-yellow-400',
+    border: 'border-yellow-500/20',
+    bg: 'bg-yellow-500/5',
+    features: ['Bots ilimitados', 'Productos ilimitados', 'Todo el Pack Pro incluido', 'Manager dedicado 1:1'],
+  },
+]
+
+const HOW_IT_WORKS = [
+  { step: '01', title: 'Regístrate gratis', desc: 'Crea tu cuenta con el código de un miembro activo. El proceso toma menos de 2 minutos.' },
+  { step: '02', title: 'Elige tu pack', desc: 'Selecciona el plan que mejor se adapte a tu negocio. Desde el pack básico hasta el elite.' },
+  { step: '03', title: 'Activa y escala', desc: 'Configura tus herramientas, invita a tu red y empieza a generar comisiones desde el primer día.' },
+]
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen relative overflow-hidden font-sans text-white bg-transparent">
-      {/* Background dynamics - Liquid Energy clouds */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[120%] h-[120%] bg-[radial-gradient(circle_at_center,rgba(58,99,204,0.1)_0%,transparent_70%)] animate-pulse-slow" />
-        <div className="absolute top-1/4 right-[-10%] w-[800px] h-[800px] bg-[#DA6CE9]/15 rounded-full blur-[150px] animate-pulse" />
-        <div className="absolute bottom-1/4 left-[-10%] w-[900px] h-[900px] bg-[#60C6E5]/10 rounded-full blur-[150px] animate-pulse-slow" />
+    <div className="min-h-screen relative overflow-x-hidden text-white">
+
+      {/* Grid sutil */}
+      <div className="fixed inset-0 opacity-[0.02] pointer-events-none" style={{
+        backgroundImage: `linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px)`,
+        backgroundSize: '60px 60px',
+      }} />
+
+      {/* Orbes de fondo */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] rounded-full bg-purple-700/12 blur-[140px]" />
+        <div className="absolute top-[30%] right-[-10%] w-[500px] h-[500px] rounded-full bg-cyan-500/10 blur-[130px]" />
+        <div className="absolute bottom-[-10%] left-[30%] w-[500px] h-[500px] rounded-full bg-indigo-600/10 blur-[130px]" />
       </div>
 
-      <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Navigation Bar */}
-        <header className="flex items-center justify-between px-6 py-5 md:px-12 backdrop-blur-2xl border-b border-white/10 sticky top-0 z-50">
-          <Link href="/" className="flex items-center gap-4 group">
-            <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-[#60C6E5] to-[#DA6CE9] p-[1px] shadow-[0_0_20px_rgba(96,198,229,0.3)]">
-              <div className="w-full h-full rounded-2xl bg-[#0F0A2E] flex items-center justify-center overflow-hidden">
-                <img src="/logo.png" alt="JD Logo" className="w-8 h-8 md:w-10 md:h-10 object-contain" />
-              </div>
+      {/* ── HERO ── */}
+      <section className="relative px-5 text-center pt-16 pb-14">
+        <div className="relative z-10 max-w-xl mx-auto flex flex-col items-center">
+
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.04] border border-white/[0.07] mb-8">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[9px] font-black uppercase tracking-widest text-white/35">Plataforma activa · LATAM 2026</span>
+          </div>
+
+          {/* Logo */}
+          <div className="relative mb-8">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500/20 via-purple-600/15 to-pink-500/10 blur-3xl scale-125" />
+            <div className="relative w-28 h-28 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-2xl border border-white/10 overflow-hidden bg-black/50 backdrop-blur-xl shadow-2xl shadow-black/60">
+              <img src="/logo.png" alt="JD Internacional" className="w-full h-full object-contain p-4" />
             </div>
-            <span className="text-xl md:text-3xl font-black tracking-tighter uppercase">
-              JD <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#60C6E5] to-[#7F56EF]">INTERNACIONAL</span>
-            </span>
-          </Link>
-
-          {/* Desktop nav */}
-          <div className="hidden lg:flex items-center gap-10">
-            <Link href="/login" className="text-sm font-black uppercase tracking-[0.2em] text-white/60 hover:text-white transition-colors">Entrar</Link>
-            <Link href="/register" className="btn-liquid transform scale-90">Comenzar Ahora</Link>
           </div>
 
-          {/* Mobile nav */}
-          <div className="flex lg:hidden items-center gap-3">
-            <Link href="/login" className="text-xs font-black uppercase tracking-[0.15em] text-white/60 hover:text-white transition-colors px-3 py-2">
-              Entrar
-            </Link>
-            <Link
-              href="/register"
-              className="text-xs font-black uppercase tracking-[0.15em] text-white bg-gradient-to-r from-[#3A63CC] via-[#7F56EF] to-[#DA6CE9] px-4 py-2 rounded-2xl border-t border-white/30 hover:scale-105 transition-transform active:scale-95"
-            >
-              Unirse
-            </Link>
-          </div>
-        </header>
-
-        {/* Hero Section */}
-        <main className="flex-1 max-w-7xl mx-auto px-6 pt-20 sm:pt-32 pb-24 sm:pb-40 text-center flex flex-col items-center">
-          {/* Status Badge */}
-          <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-white/5 border border-white/20 backdrop-blur-3xl mb-10 md:mb-12 shadow-2xl">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#60C6E5] shadow-[0_0_15px_#60C6E5] animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#9EE7EC]">Ecosistema Líquido v4.0</span>
-          </div>
-
-          <h1 className="text-6xl sm:text-8xl md:text-9xl font-black mb-8 md:mb-10 tracking-tighter leading-[0.9] uppercase">
-            <span className="text-transparent bg-clip-text bg-gradient-to-b from-[#F3F4F9] to-white/20">EL FUTURO</span>
+          {/* Headline */}
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter leading-[1.1] mb-4">
+            <span className="text-white/90">El ecosistema digital</span>
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#60C6E5] via-[#7F56EF] to-[#DA6CE9]">SIN LÍMITES</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400">
+              para crecer sin límites
+            </span>
           </h1>
 
-          <p className="max-w-2xl md:max-w-3xl text-lg sm:text-xl md:text-2xl text-white/50 font-semibold leading-relaxed mb-12 md:mb-16 px-2 md:px-6">
-            Lidera la nueva era del <span className="text-white">Network Marketing</span> con inteligencia artificial, transacciones líquidas y diseño de última generación.
+          <p className="text-xs sm:text-sm text-white/38 leading-relaxed max-w-md mx-auto mb-8">
+            Bots de WhatsApp con IA, publicidad digital, tiendas virtuales, landing pages y un sistema de referidos que trabaja para ti las 24 horas.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-5 sm:gap-8 mb-16 sm:mb-24 w-full max-w-sm sm:max-w-none sm:w-auto">
-            <Link href="/register" className="btn-liquid text-center">
-              Únete a la Red
+          {/* CTAs — siempre en fila, compactos */}
+          <div className="flex flex-row gap-2.5 items-center">
+            <Link
+              href="/register"
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-600 text-xs font-black uppercase tracking-wider text-white border border-white/10 hover:from-cyan-400 hover:to-purple-500 transition-all shadow-lg shadow-purple-900/30"
+            >
+              Crear cuenta
             </Link>
-            <Link href="/login" className="btn-outline-water text-center">
-              Oficina Virtual
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-xs font-black uppercase tracking-wider text-white/60 hover:bg-white/[0.09] hover:text-white transition-all"
+            >
+              Ingresar
             </Link>
           </div>
 
-          {/* Stats / Social Proof */}
-          <div className="flex flex-wrap justify-center gap-4 md:gap-6 mb-20 sm:mb-32 w-full">
-            {[
-              { icon: Users, value: '1,200+', label: 'Miembros Activos', accent: '#60C6E5' },
-              { icon: Globe, value: '18', label: 'Países', accent: '#7F56EF' },
-              { icon: DollarSign, value: '$2.4M', label: 'Distribuido', accent: '#DA6CE9' },
-            ].map((stat, i) => (
-              <div key={i} className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl">
-                <stat.icon className="w-4 h-4 shrink-0" style={{ color: stat.accent }} />
-                <span className="text-base font-black text-white">{stat.value}</span>
-                <span className="text-xs font-bold uppercase tracking-[0.15em] text-white/40">{stat.label}</span>
-              </div>
-            ))}
+          <p className="text-[9px] text-white/18 mt-4 tracking-wide">Sin tarjeta de crédito · Registro en 2 minutos</p>
+
+        </div>
+
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+      </section>
+
+      {/* ── FEATURES ── */}
+      <section className="relative py-14 px-5">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-8">
+            <p className="text-[9px] font-black uppercase tracking-widest text-purple-400 mb-2">Todo en un solo lugar</p>
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              Herramientas que potencian tu negocio
+            </h2>
+            <p className="text-xs text-white/28 mt-2 max-w-sm mx-auto leading-relaxed">
+              Cada herramienta diseñada para vender más, automatizar y escalar.
+            </p>
           </div>
 
-          {/* Liquid Glass Feature Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12 w-full text-left">
-            {[
-              { title: 'IA Fluida', desc: 'Sistemas inteligentes que optimizan cada rama de tu árbol binario automáticamente.', icon: Zap, accent: '#60C6E5' },
-              { title: 'Red Global', desc: 'Expande tu negocio a través de continentes con latencia cero y soporte total.', icon: Network, accent: '#7F56EF' },
-              { title: 'Capital Real', desc: 'Gestiona tus fondos con transparencia cristalina y retiros instantáneos.', icon: TrendingUp, accent: '#DA6CE9' },
-            ].map((feature, i) => (
-              <div key={i} className="water-glass-glow p-8 md:p-12 group border-white/5">
-                <div className="relative mb-8 md:mb-10">
-                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-[1.5rem] bg-gradient-to-br from-white/20 to-transparent p-[1px] group-hover:scale-110 transition-transform duration-700">
-                    <div className="w-full h-full rounded-[1.5rem] bg-[#0F0A2E]/80 backdrop-blur-2xl flex items-center justify-center">
-                      <feature.icon className="w-8 h-8 md:w-10 md:h-10" style={{ color: feature.accent }} />
-                    </div>
-                  </div>
-                  <div className="absolute inset-0 blur-3xl opacity-20 group-hover:opacity-50 transition-all duration-700" style={{ backgroundColor: feature.accent }} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {FEATURES.map((f, i) => (
+              <div
+                key={i}
+                className={`group relative rounded-xl border ${f.border} ${f.bg} p-5 overflow-hidden transition-all duration-300 hover:border-opacity-40`}
+              >
+                <div className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r ${f.glow} to-transparent opacity-50`} />
+                <div className={`w-8 h-8 rounded-lg ${f.bg} border ${f.border} flex items-center justify-center mb-3 transition-transform duration-300 group-hover:scale-110`}>
+                  <f.icon size={14} className={f.color} />
                 </div>
-                <h3 className="text-2xl md:text-3xl font-black uppercase mb-4 md:mb-6 tracking-tighter text-white">{feature.title}</h3>
-                <p className="text-white/40 text-base md:text-lg leading-snug font-bold">{feature.desc}</p>
+                <h3 className={`text-[11px] font-black mb-1.5 ${f.color} uppercase tracking-wide`}>{f.title}</h3>
+                <p className="text-[11px] text-white/32 leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
-        </main>
+        </div>
+      </section>
 
-        {/* Footer */}
-        <footer className="px-6 py-12 md:py-16 border-t border-white/10 backdrop-blur-3xl bg-black/20">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 md:gap-10">
-            <div className="flex items-center gap-4 px-6 py-2.5 rounded-full bg-white/5 border border-white/10 shadow-inner">
-              <Radio className="w-5 h-5 text-[#60C6E5] animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50">Servidores JD: Online & Fluidos</span>
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">JD INTERNACIONAL © 2026. BORN FOR SUCCESS.</span>
-            <div className="flex gap-10 text-[10px] font-black uppercase tracking-[0.3em]">
-              <Link href="/terms" className="text-white/40 hover:text-[#60C6E5] transition-colors">Términos</Link>
-              <Link href="/privacy" className="text-white/40 hover:text-[#DA6CE9] transition-colors">Privacidad</Link>
+      {/* ── HOW IT WORKS ── */}
+      <section className="relative py-14 px-5">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-8">
+            <p className="text-[9px] font-black uppercase tracking-widest text-cyan-400 mb-2">Sencillo y rápido</p>
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">¿Cómo funciona?</h2>
+          </div>
+          <div className="space-y-2.5">
+            {HOW_IT_WORKS.map((h, i) => (
+              <div key={i} className="group flex gap-4 items-start bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 hover:bg-white/[0.03] transition-colors duration-300">
+                <span className="text-3xl font-black text-white/[0.06] shrink-0 leading-none mt-0.5">{h.step}</span>
+                <div>
+                  <h3 className="text-xs font-black text-white mb-1">{h.title}</h3>
+                  <p className="text-[11px] text-white/32 leading-relaxed">{h.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── PLANS ── */}
+      <section className="relative py-14 px-5">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-8">
+            <p className="text-[9px] font-black uppercase tracking-widest text-yellow-400 mb-2">Elige tu nivel</p>
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">Packs disponibles</h2>
+            <p className="text-xs text-white/28 mt-2">Empieza donde quieras y escala cuando estés listo.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {PLANS.map((p, i) => (
+              <div key={i} className={`relative rounded-xl border ${p.border} ${p.bg} p-4`}>
+                {p.popular && (
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-md bg-gradient-to-r from-purple-600 to-purple-500 text-[9px] font-black uppercase tracking-wider text-white">
+                    Más popular
+                  </div>
+                )}
+                <div className={`flex items-center gap-2 mb-3 ${p.popular ? 'mt-2' : ''}`}>
+                  <p.icon size={13} className={p.color} />
+                  <span className={`text-[11px] font-black ${p.color}`}>{p.name}</span>
+                </div>
+                <ul className="space-y-1.5">
+                  {p.features.map((f, j) => (
+                    <li key={j} className="flex items-start gap-2">
+                      <ShieldCheck size={10} className={`${p.color} shrink-0 mt-0.5`} />
+                      <span className="text-[10px] text-white/38 leading-relaxed">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-6">
+            <Link
+              href="/register"
+              className="inline-flex items-center justify-center px-6 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-600 text-xs font-black uppercase tracking-wider text-white border border-white/10 hover:from-cyan-400 hover:to-purple-500 transition-all shadow-lg shadow-purple-900/30"
+            >
+              Ver precios y unirme
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA FINAL ── */}
+      <section className="relative py-14 px-5">
+        <div className="max-w-md mx-auto">
+          <div className="relative rounded-2xl border border-white/[0.07] bg-white/[0.02] p-10 text-center overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-600/8 via-transparent to-cyan-500/8 pointer-events-none" />
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-500/25 to-transparent" />
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 mx-auto mb-5 shadow-xl shadow-black/40">
+                <img src="/logo.png" alt="JD Internacional" className="w-full h-full object-contain" />
+              </div>
+              <h2 className="text-xl font-black text-white tracking-tight mb-2">
+                Empieza hoy mismo
+              </h2>
+              <p className="text-xs text-white/32 mb-6 leading-relaxed max-w-xs mx-auto">
+                Únete a emprendedores en toda Latinoamérica que ya están construyendo su negocio digital con JD Internacional.
+              </p>
+              <Link
+                href="/register"
+                className="inline-flex items-center justify-center px-6 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-600 text-xs font-black uppercase tracking-wider text-white border border-white/10 hover:from-cyan-400 hover:to-purple-500 transition-all shadow-lg shadow-purple-900/30"
+              >
+                Crear mi cuenta gratis
+              </Link>
             </div>
           </div>
-        </footer>
-      </div>
+        </div>
+      </section>
 
-      {/* Decorative Energy Grid */}
-      <div className="absolute inset-0 opacity-[0.04] pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(158, 231, 236, 0.2) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(110, 81, 222, 0.2) 1px, transparent 1px)`,
-          backgroundSize: '40px 40px'
-        }}
-      />
+      {/* ── FOOTER ── */}
+      <footer className="border-t border-white/[0.05] mt-2">
+        <div className="max-w-5xl mx-auto px-5 py-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-5">
+            <div className="w-7 h-7 rounded-lg overflow-hidden border border-white/10">
+              <img src="/logo.png" alt="JD Internacional" className="w-full h-full object-contain" />
+            </div>
+            <div className="flex flex-wrap justify-center gap-5 text-[9px] font-bold uppercase tracking-widest">
+              <Link href="/login" className="text-white/22 hover:text-white transition-colors">Iniciar sesión</Link>
+              <Link href="/register" className="text-white/22 hover:text-white transition-colors">Registro</Link>
+              <Link href="/privacy" className="text-white/22 hover:text-cyan-400 transition-colors">Privacidad</Link>
+              <Link href="/terms" className="text-white/22 hover:text-purple-400 transition-colors">Términos</Link>
+            </div>
+            <span className="text-[9px] text-white/14 font-bold uppercase tracking-widest">
+              © 2026 JD Internacional
+            </span>
+          </div>
+
+          <div className="mt-6 pt-5 border-t border-white/[0.03]">
+            <p className="text-[9px] text-white/14 leading-relaxed text-center max-w-3xl mx-auto">
+              <strong className="text-white/18">Política de Privacidad:</strong> JD Internacional recopila datos personales únicamente para la prestación de sus servicios. Tu información no es vendida ni compartida con terceros sin tu consentimiento explícito. Los datos son almacenados de forma segura con cifrado de extremo a extremo. Tienes derecho a solicitar la eliminación de tu cuenta y datos en cualquier momento contactando a soporte. Al registrarte, aceptas nuestros{' '}
+              <Link href="/terms" className="text-white/25 hover:text-white underline">Términos de Uso</Link> y{' '}
+              <Link href="/privacy" className="text-white/25 hover:text-white underline">Política de Privacidad</Link> completa.
+            </p>
+          </div>
+        </div>
+      </footer>
+
     </div>
   )
 }

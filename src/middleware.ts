@@ -5,14 +5,12 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value
   const { pathname } = request.nextUrl
 
-  const publicPaths = ['/', '/login', '/register', '/forgot-password', '/reset-password']
-  const isPublicPath = publicPaths.some(path => pathname === path || pathname.startsWith(path + '?'))
-  const isApiAuth = pathname.startsWith('/api/auth')
-
-  if (!token && pathname.startsWith('/dashboard')) {
+  // Rutas protegidas — requieren sesión
+  if (!token && (pathname.startsWith('/dashboard') || pathname.startsWith('/admin'))) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
+  // Si ya tiene sesión, redirigir lejos del login/registro
   if (token && (pathname === '/login' || pathname === '/register')) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
@@ -21,5 +19,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login', '/register'],
+  matcher: ['/dashboard/:path*', '/admin/:path*', '/login', '/register'],
 }
