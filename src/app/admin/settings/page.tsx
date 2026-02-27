@@ -54,21 +54,29 @@ export default function AdminSettingsPage() {
     setUploadingQr(true)
     const fd = new FormData()
     fd.append('file', file)
-    const res = await fetch('/api/upload', { method: 'POST', body: fd })
-    const data = await res.json()
+    const uploadRes = await fetch('/api/upload', { method: 'POST', body: fd })
+    const uploadData = await uploadRes.json()
     setUploadingQr(false)
-    if (data.url) {
-      setPaymentQr(data.url)
-      await fetch('/api/admin/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'PAYMENT_QR_URL', value: data.url }),
-      })
-      setSaved('PAYMENT_QR_URL')
-      setTimeout(() => setSaved(null), 2000)
-    } else {
-      alert('Error al subir el QR')
+
+    if (!uploadRes.ok || !uploadData.url) {
+      alert(uploadData.error ?? 'Error al subir la imagen a Supabase Storage. Verifica que el bucket "uploads" exista y sea público.')
+      return
     }
+
+    setPaymentQr(uploadData.url)
+    const saveRes = await fetch('/api/admin/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'PAYMENT_QR_URL', value: uploadData.url }),
+    })
+
+    if (!saveRes.ok) {
+      alert('La imagen se subió pero no se pudo guardar en la configuración. Inténtalo de nuevo.')
+      return
+    }
+
+    setSaved('PAYMENT_QR_URL')
+    setTimeout(() => setSaved(null), 2000)
   }
 
   async function removeQr() {
