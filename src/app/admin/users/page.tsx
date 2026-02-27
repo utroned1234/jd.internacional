@@ -12,6 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react'
 
 interface UserRow {
@@ -43,6 +45,8 @@ export default function AdminUsersPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
   const [updating, setUpdating] = useState<string | null>(null)
+  const [deleteModal, setDeleteModal] = useState<{ id: string; username: string; fullName: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
@@ -70,6 +74,20 @@ export default function AdminUsersPage() {
     })
     await fetchUsers()
     setUpdating(null)
+  }
+
+  async function confirmDelete() {
+    if (!deleteModal) return
+    setDeleting(true)
+    const res = await fetch(`/api/admin/users/${deleteModal.id}`, { method: 'DELETE' })
+    const data = await res.json()
+    setDeleting(false)
+    if (!res.ok) {
+      alert(data.error ?? 'Error al eliminar el usuario')
+      return
+    }
+    setDeleteModal(null)
+    fetchUsers()
   }
 
   return (
@@ -188,6 +206,15 @@ export default function AdminUsersPage() {
                               <option value="PRO">PRO</option>
                               <option value="ELITE">ELITE</option>
                             </select>
+                            {!u.isAdmin && (
+                              <button
+                                onClick={() => setDeleteModal({ id: u.id, username: u.username, fullName: u.fullName })}
+                                title="Eliminar usuario"
+                                className="p-1.5 rounded-lg bg-red-500/8 border border-red-500/20 hover:bg-red-500/20 transition-colors"
+                              >
+                                <Trash2 size={13} className="text-red-400" />
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
@@ -220,6 +247,58 @@ export default function AdminUsersPage() {
           >
             <ChevronRight size={14} />
           </button>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => !deleting && setDeleteModal(null)} />
+          <div className="relative bg-[#13131f] border border-red-500/20 rounded-2xl p-6 w-full max-w-sm z-10 shadow-2xl shadow-black/60">
+
+            {/* Top red line */}
+            <div className="absolute top-0 left-0 right-0 h-px rounded-t-2xl"
+              style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.7), transparent)' }} />
+
+            <div className="flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/25 flex items-center justify-center mb-4">
+                <AlertTriangle size={26} className="text-red-400" />
+              </div>
+              <h3 className="text-base font-black text-white mb-1">Eliminar usuario</h3>
+              <p className="text-xs text-white/40 mb-1">
+                Estás a punto de eliminar a
+              </p>
+              <p className="text-sm font-black text-white mb-0.5">{deleteModal.fullName}</p>
+              <p className="text-xs text-white/30 mb-4">@{deleteModal.username}</p>
+
+              <div className="w-full flex items-start gap-2 bg-red-500/8 border border-red-500/15 rounded-xl px-3 py-2.5 mb-5 text-left">
+                <AlertTriangle size={12} className="text-red-400 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-red-400/80 leading-relaxed">
+                  Esta acción es <strong>irreversible</strong>. Se eliminarán todos sus datos, bots, solicitudes y comisiones.
+                </p>
+              </div>
+
+              <div className="flex gap-2 w-full">
+                <button
+                  onClick={() => setDeleteModal(null)}
+                  disabled={deleting}
+                  className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white/50 hover:bg-white/10 transition-colors disabled:opacity-40"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={deleting}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-600/80 border border-red-500/30 text-sm font-black text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+                >
+                  {deleting
+                    ? <Loader2 size={14} className="animate-spin" />
+                    : <><Trash2 size={13} /> Eliminar</>
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
