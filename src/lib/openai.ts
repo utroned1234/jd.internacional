@@ -148,7 +148,7 @@ async function callChatCompletion(
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-5.1',
         response_format: { type: 'json_object' },
         messages,
         temperature: 0.6,
