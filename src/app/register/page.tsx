@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Eye, EyeOff, AlertCircle, CheckCircle2, ArrowRight, Lock, ChevronDown } from 'lucide-react'
+import { Eye, EyeOff, AlertCircle, CheckCircle2, ArrowRight, Lock, ChevronDown, User, Gift } from 'lucide-react'
 
 const LATAM_DATA: Record<string, string[]> = {
   'Argentina': ['Buenos Aires', 'Cordoba', 'Rosario', 'Mendoza', 'La Plata', 'Tucuman', 'Mar del Plata', 'Salta', 'Santa Fe', 'San Juan'],
@@ -135,44 +135,109 @@ function RegisterForm() {
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
-        <div className="pointer-events-none fixed inset-0">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-green-500/8 blur-[130px]" />
+        {/* Background glows */}
+        <div className="pointer-events-none fixed inset-0 overflow-hidden">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-green-500/7 blur-[130px]" />
+          <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-purple-600/7 blur-[120px]" />
+          <div className="absolute top-1/3 left-0 w-[300px] h-[300px] rounded-full bg-cyan-500/5 blur-[100px]" />
         </div>
-        <div className="w-full max-w-sm relative z-10">
-          <div className="water-glass p-8 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-green-500/15 border border-green-500/25 flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 size={28} className="text-green-400" />
+
+        <div className="w-full max-w-[360px] relative z-10">
+          <div className="water-glass relative overflow-hidden" style={{ padding: '1.75rem' }}>
+
+            {/* Top neon line */}
+            <div className="absolute top-0 left-0 right-0 h-px"
+              style={{ background: 'linear-gradient(90deg, transparent, #00FF88 30%, #00F5FF 70%, transparent)' }} />
+
+            {/* Icon + title */}
+            <div className="flex flex-col items-center mb-5">
+              <div className="relative mb-3">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                  style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)', boxShadow: '0 0 35px rgba(0,255,136,0.15)' }}>
+                  <CheckCircle2 size={30} className="text-green-400" />
+                </div>
+                <div className="absolute inset-0 rounded-2xl animate-ping opacity-15"
+                  style={{ border: '1.5px solid rgba(0,255,136,0.6)' }} />
+              </div>
+              <span className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: '#00FF88' }}>
+                ¡Cuenta creada!
+              </span>
+              <h1 className="text-base font-black text-white mt-1">Bienvenido a la red</h1>
+              <p className="text-xl font-black mt-0.5"
+                style={{ background: 'linear-gradient(135deg, #00F5FF, #9B00FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                {success.fullName}
+              </p>
             </div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-green-400 mb-1">Registro Exitoso</p>
-            <h1 className="text-lg font-black text-white mb-1">Bienvenido,</h1>
-            <p className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 mb-4">{success.fullName}</p>
-            <p className="text-xs text-white/35 mb-4">Tu cuenta fue creada. Guarda estas credenciales:</p>
-            <div className="space-y-2 text-left mb-5">
-              <div className="bg-white/[0.04] border border-white/8 rounded-xl px-4 py-3">
-                <p className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Usuario</p>
-                <p className="text-sm text-white font-bold">{success.username}</p>
+
+            {/* Warning */}
+            <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl mb-4"
+              style={{ background: 'rgba(255,184,0,0.06)', border: '1px solid rgba(255,184,0,0.18)' }}>
+              <span className="text-sm shrink-0 mt-px">⚠️</span>
+              <p className="text-[10px] text-white/40 leading-relaxed">
+                Guarda estas credenciales en un lugar seguro. No las compartas con nadie.
+              </p>
+            </div>
+
+            {/* Credentials */}
+            <div className="space-y-2 mb-5">
+
+              {/* Username */}
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                style={{ background: 'rgba(0,245,255,0.05)', border: '1px solid rgba(0,245,255,0.18)' }}>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'rgba(0,245,255,0.1)', border: '1px solid rgba(0,245,255,0.25)' }}>
+                  <User size={13} style={{ color: '#00F5FF' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(0,245,255,0.5)' }}>Usuario</p>
+                  <p className="text-sm font-black text-white truncate">{success.username}</p>
+                </div>
               </div>
-              <div className="bg-white/[0.04] border border-white/8 rounded-xl px-4 py-3">
-                <p className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Contraseña</p>
-                <p className="text-sm text-white font-bold tracking-widest">{success.password}</p>
+
+              {/* Password */}
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                style={{ background: 'rgba(155,0,255,0.05)', border: '1px solid rgba(155,0,255,0.2)' }}>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'rgba(155,0,255,0.1)', border: '1px solid rgba(155,0,255,0.25)' }}>
+                  <Lock size={13} style={{ color: '#9B00FF' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(155,0,255,0.6)' }}>Contraseña</p>
+                  <p className="text-sm font-black text-white font-mono tracking-wider truncate">{success.password}</p>
+                </div>
               </div>
-              <div className="bg-cyan-500/8 border border-cyan-500/20 rounded-xl px-4 py-3">
-                <p className="text-[10px] text-cyan-400 font-black uppercase tracking-wider mb-0.5">Tu Código de Referido</p>
-                <p className="text-lg text-white font-black tracking-widest">{success.referralCode}</p>
+
+              {/* Referral code */}
+              <div className="px-4 py-3 rounded-xl"
+                style={{ background: 'linear-gradient(135deg, rgba(255,184,0,0.06), rgba(0,245,255,0.04))', border: '1px solid rgba(255,184,0,0.22)' }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <Gift size={11} style={{ color: '#FFB800' }} />
+                  <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,184,0,0.7)' }}>Tu Código de Referido</p>
+                </div>
+                <p className="text-2xl font-black tracking-[0.15em]"
+                  style={{ background: 'linear-gradient(135deg, #FFB800, #00F5FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                  {success.referralCode}
+                </p>
+                <p className="text-[9px] text-white/25 mt-0.5">Compártelo para ganar comisiones en tu red</p>
               </div>
             </div>
-            <button
-              onClick={() => { router.refresh(); router.push('/dashboard') }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-[0.98]"
-              style={{
-                background: 'linear-gradient(135deg, #0ea5e9, #7c3aed)',
-                color: '#fff',
-                border: '1px solid rgba(255,255,255,0.12)',
-                boxShadow: '0 4px 20px rgba(124,58,237,0.25)',
-              }}
-            >
-              Ir a mi Panel <ArrowRight size={13} />
-            </button>
+
+            {/* CTA — small, centered */}
+            <div className="flex justify-center">
+              <button
+                onClick={() => { router.refresh(); router.push('/dashboard') }}
+                className="flex items-center gap-2 px-7 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-[0.97] hover:brightness-110"
+                style={{
+                  background: 'linear-gradient(135deg, #0ea5e9, #7c3aed)',
+                  color: '#fff',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  boxShadow: '0 4px 24px rgba(124,58,237,0.35)',
+                }}
+              >
+                Ir a mi panel <ArrowRight size={12} />
+              </button>
+            </div>
+
           </div>
         </div>
       </div>
