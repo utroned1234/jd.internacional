@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Wallet, Users, Network, ArrowUpRight } from 'lucide-react'
+import { Wallet, Users, Gift, ArrowUpRight } from 'lucide-react'
 
 interface Commission {
   id: string
-  type: 'BINARY_BONUS' | 'DIRECT_BONUS'
+  type: 'DIRECT_BONUS' | 'SPONSORSHIP_BONUS'
   amount: number
   description: string | null
   createdAt: string
@@ -41,8 +41,8 @@ export default function CommissionsPage() {
     )
   }
 
-  const binaryTotal = summary.byType.find(t => t.type === 'BINARY_BONUS')?.total || 0
-  const directTotal = summary.byType.find(t => t.type === 'DIRECT_BONUS')?.total || 0
+  const sponsorTotal = summary.byType.find(t => t.type === 'SPONSORSHIP_BONUS')?.total || 0
+  const directTotal  = summary.byType.find(t => t.type === 'DIRECT_BONUS')?.total || 0
 
   return (
     <div className="px-4 sm:px-6 pt-6 max-w-6xl mx-auto pb-20 space-y-6">
@@ -88,7 +88,7 @@ export default function CommissionsPage() {
           </div>
         </div>
 
-        {/* Bono Binario */}
+        {/* Bono de Patrocinio */}
         <div className="relative rounded-2xl p-6 overflow-hidden transition-all duration-300 hover:scale-[1.02]"
           style={{
             background: 'linear-gradient(135deg, rgba(0,245,255,0.07), rgba(0,102,255,0.04))',
@@ -99,12 +99,12 @@ export default function CommissionsPage() {
           <div className="flex items-center gap-3 mb-4">
             <div className="w-9 h-9 rounded-lg flex items-center justify-center"
               style={{ background: 'rgba(0,245,255,0.1)', border: '1px solid rgba(0,245,255,0.2)' }}>
-              <Network className="w-4 h-4" style={{ color: '#00F5FF' }} />
+              <Gift className="w-4 h-4" style={{ color: '#00F5FF' }} />
             </div>
-            <span className="text-xs font-light" style={{ color: 'rgba(255,255,255,0.5)' }}>Bono Binario</span>
+            <span className="text-xs font-light" style={{ color: 'rgba(255,255,255,0.5)' }}>Bono de Patrocinio</span>
           </div>
-          <p className="text-2xl font-black tracking-tighter" style={{ color: '#00F5FF' }}>${binaryTotal.toFixed(2)}</p>
-          <p className="text-[9px] font-black uppercase tracking-widest mt-1" style={{ color: 'rgba(255,255,255,0.2)' }}>Ingresos por red</p>
+          <p className="text-2xl font-black tracking-tighter" style={{ color: '#00F5FF' }}>${sponsorTotal.toFixed(2)}</p>
+          <p className="text-[9px] font-black uppercase tracking-widest mt-1" style={{ color: 'rgba(255,255,255,0.2)' }}>20% por activación de plan</p>
         </div>
 
         {/* Bono Directo */}
@@ -123,7 +123,7 @@ export default function CommissionsPage() {
             <span className="text-xs font-light" style={{ color: 'rgba(255,255,255,0.5)' }}>Bono Directo</span>
           </div>
           <p className="text-2xl font-black tracking-tighter" style={{ color: '#9B00FF' }}>${directTotal.toFixed(2)}</p>
-          <p className="text-[9px] font-black uppercase tracking-widest mt-1" style={{ color: 'rgba(255,255,255,0.2)' }}>Ingresos por referidos</p>
+          <p className="text-[9px] font-black uppercase tracking-widest mt-1" style={{ color: 'rgba(255,255,255,0.2)' }}>Por referido registrado</p>
         </div>
       </div>
 
@@ -137,10 +137,6 @@ export default function CommissionsPage() {
           <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.5)' }}>
             Historial de Transacciones
           </h3>
-          <button className="text-[10px] font-black uppercase tracking-widest transition-colors"
-            style={{ color: 'rgba(0,245,255,0.6)' }}>
-            Ver todo
-          </button>
         </div>
 
         {commissions.length === 0 ? (
@@ -156,24 +152,22 @@ export default function CommissionsPage() {
         ) : (
           <div>
             {commissions.map((c) => {
-              const isBinary = c.type === 'BINARY_BONUS'
-              const color = isBinary ? '#00F5FF' : '#9B00FF'
+              const isSponsor = c.type === 'SPONSORSHIP_BONUS'
+              const color = isSponsor ? '#00F5FF' : '#9B00FF'
+              const label = isSponsor ? 'Bono de Patrocinio' : 'Bono Directo'
+              const Icon  = isSponsor ? Gift : Users
               return (
-                <div key={c.id} className="p-4 flex items-center justify-between transition-colors group"
+                <div key={c.id} className="p-4 flex items-center justify-between transition-colors"
                   style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center"
                       style={{ background: `${color}10`, border: `1px solid ${color}25` }}>
-                      {isBinary
-                        ? <Network className="w-4 h-4" style={{ color }} />
-                        : <Users className="w-4 h-4" style={{ color }} />}
+                      <Icon className="w-4 h-4" style={{ color }} />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-white">
-                        {isBinary ? 'Bono Binario' : 'Bono Directo'}
-                      </p>
+                      <p className="text-sm font-medium text-white">{label}</p>
                       <p className="text-[10px] font-light" style={{ color: 'rgba(255,255,255,0.25)' }}>
                         {c.description || new Date(c.createdAt).toLocaleDateString()}
                       </p>

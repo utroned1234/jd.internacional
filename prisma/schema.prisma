@@ -26,7 +26,6 @@ model User {
   isAdmin             Boolean              @default(false) @map("is_admin")
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
-  binaryPosition      BinaryPosition?
   bots                Bot[]
   commissions         Commission[]
   passwordResetTokens PasswordResetToken[]
@@ -48,20 +47,6 @@ model User {
   @@map("users")
 }
 
-model BinaryPosition {
-  id          String           @id @default(uuid()) @db.Uuid
-  userId      String           @unique @map("user_id") @db.Uuid
-  parentId    String?          @map("parent_id") @db.Uuid
-  position    Position?
-  leftVolume  Int              @default(0) @map("left_volume")
-  rightVolume Int              @default(0) @map("right_volume")
-  createdAt   DateTime         @default(now()) @map("created_at")
-  parent      BinaryPosition?  @relation("BinaryTree", fields: [parentId], references: [id])
-  children    BinaryPosition[] @relation("BinaryTree")
-  user        User             @relation(fields: [userId], references: [id])
-
-  @@map("binary_positions")
-}
 
 model Commission {
   id          String         @id @default(uuid()) @db.Uuid
@@ -259,13 +244,8 @@ enum UserPlan {
   ELITE
 }
 
-enum Position {
-  LEFT
-  RIGHT
-}
 
 enum CommissionType {
-  BINARY_BONUS
   DIRECT_BONUS
   SPONSORSHIP_BONUS
 }

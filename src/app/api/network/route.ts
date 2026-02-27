@@ -2,30 +2,64 @@ import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-async function getLevels(rootId: string, maxLevels = 5) {
-  const result: { level: number; count: number; active: number; members: { username: string; fullName: string; isActive: boolean }[] }[] = []
-  let parentIds = [rootId]
+export interface TreeNode {
+  id: string
+  username: string
+  fullName: string
+  isActive: boolean
+  plan: string
+  level: number
+  directCount: number   // direct children
+  children: TreeNode[]
+}
+
+async function buildTree(rootId: string, maxLevels = 50) {
+  // BFS — max 5 queries (one per level)
+  type Raw = { id: string; username: string; fullName: string; isActive: boolean; plan: string; sponsorId: string | null; level: number; children: Raw[] }
+  const map = new Map<string, Raw>()
+  let levelIds = [rootId]
+  let total = 0, active = 0
 
   for (let level = 1; level <= maxLevels; level++) {
     const members = await prisma.user.findMany({
-      where: { sponsorId: { in: parentIds } },
-      select: { id: true, username: true, fullName: true, isActive: true },
+      where: { sponsorId: { in: levelIds } },
+      select: { id: true, username: true, fullName: true, isActive: true, plan: true, sponsorId: true },
       orderBy: { createdAt: 'asc' },
     })
-
     if (members.length === 0) break
 
-    result.push({
-      level,
-      count: members.length,
-      active: members.filter(m => m.isActive).length,
-      members: members.map(m => ({ username: m.username, fullName: m.fullName, isActive: m.isActive })),
-    })
-
-    parentIds = members.map(m => m.id)
+    for (const m of members) {
+      map.set(m.id, { ...m, level, children: [] })
+      total++
+      if (m.isActive) active++
+    }
+    levelIds = members.map(m => m.id)
   }
 
-  return result
+  // Wire up parent → children
+  const roots: Raw[] = []
+  for (const node of Array.from(map.values())) {
+    if (node.sponsorId === rootId) {
+      roots.push(node)
+    } else if (node.sponsorId && map.has(node.sponsorId)) {
+      map.get(node.sponsorId)!.children.push(node)
+    }
+  }
+
+  function toTree(n: Raw): TreeNode {
+    return {
+      id: n.id,
+      username: n.username,
+      fullName: n.fullName,
+      isActive: n.isActive,
+      plan: n.plan,
+      level: n.level,
+      directCount: n.children.length,
+      children: n.children.map(toTree),
+    }
+  }
+
+  return { tree: roots.map(toTree), total, active }
 }
 
 export async function GET() {
@@ -33,12 +67,9 @@ export async function GET() {
     const user = await getAuthUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    const [levels, commissionsAgg, recentBonuses] = await Promise.all([
-      getLevels(user.id),
-      prisma.commission.aggregate({
-        where: { userId: user.id },
-        _sum: { amount: true },
-      }),
+    const [{ tree, total, active }, commissionsAgg, recentBonuses] = await Promise.all([
+      buildTree(user.id),
+      prisma.commission.aggregate({ where: { userId: user.id }, _sum: { amount: true } }),
       prisma.commission.findMany({
         where: { userId: user.id, type: 'SPONSORSHIP_BONUS' },
         orderBy: { createdAt: 'desc' },
@@ -46,33 +77,23 @@ export async function GET() {
       }),
     ])
 
-    const totalNetwork = levels.reduce((s, l) => s + l.count, 0)
-    const totalActive  = levels.reduce((s, l) => s + l.active, 0)
-
     return NextResponse.json({
       referralCode: user.referralCode,
-      user: {
-        fullName:     user.fullName,
-        username:     user.username,
-        referralCode: user.referralCode,
-        isActive:     user.isActive,
-        avatarUrl:    (user as any).avatarUrl ?? null,
-      },
-      levels,
-      recentBonuses: recentBonuses.map(b => ({
-        id:          b.id,
-        amount:      Number(b.amount),
-        description: b.description,
-        createdAt:   b.createdAt,
-      })),
+      user: { fullName: user.fullName, username: user.username, isActive: user.isActive },
+      tree,
       stats: {
-        directReferrals:   levels[0]?.count ?? 0,
-        totalNetwork,
-        totalActive,
-        totalLevels:       levels.length,
-        totalCommissions:  Number(commissionsAgg._sum.amount ?? 0),
-        pendingBalance:    0,
+        directReferrals: tree.length,
+        totalNetwork: total,
+        totalActive: active,
+        totalCommissions: Number(commissionsAgg._sum.amount ?? 0),
+        pendingBalance: 0,
       },
+      recentBonuses: recentBonuses.map(b => ({
+        id: b.id,
+        amount: Number(b.amount),
+        description: b.description,
+        createdAt: b.createdAt,
+      })),
     })
   } catch (err) {
     console.error('[GET /api/network]', err)

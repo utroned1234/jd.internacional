@@ -29,15 +29,6 @@ async function main() {
     },
   })
 
-  // Crear posicion binaria root
-  await prisma.binaryPosition.create({
-    data: {
-      userId: admin.id,
-      parentId: null,
-      position: null,
-    },
-  })
-
   console.log('Usuario root creado exitosamente:')
   console.log('  Username: admin')
   console.log('  Password: Admin1234')

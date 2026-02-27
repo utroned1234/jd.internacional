@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Users, TrendingUp, Link2, CheckCheck, UserCircle, Activity, CreditCard, DollarSign, Settings, LogOut, Camera, Copy, RefreshCw } from 'lucide-react'
+import { Users, TrendingUp, UserCircle, Activity, CreditCard, DollarSign, Settings, LogOut, Camera, RefreshCw } from 'lucide-react'
 
 interface DashboardData {
   user: {
@@ -82,7 +82,6 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [commissions, setCommissions] = useState<Commission[]>([])
   const [chartView, setChartView] = useState<'dia' | 'semana'>('dia')
-  const [copied, setCopied] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
@@ -132,12 +131,6 @@ export default function DashboardPage() {
     }, 4000)
     return () => clearInterval(interval)
   }, [])
-
-  const copyToClipboard = (text: string, type: string) => {
-    navigator.clipboard.writeText(text)
-    setCopied(type)
-    setTimeout(() => setCopied(null), 2000)
-  }
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -400,22 +393,6 @@ export default function DashboardPage() {
             </p>
           )}
 
-        </div>
-      </div>
-
-      {/* ── LINK DE REFERIDO ── */}
-      <div className="w-full">
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20 mb-3 text-center">Tu Link de Referido</p>
-        <div className="flex items-center gap-2 bg-white/3 border border-white/8 rounded-2xl px-4 py-3">
-          <Link2 className="w-4 h-4 shrink-0 text-white/30" />
-          <span className="flex-1 font-mono text-xs text-white/40 truncate">{inviteLink}</span>
-          <button
-            onClick={() => copyToClipboard(inviteLink, 'link')}
-            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
-            style={{ background: copied === 'link' ? '#00F5FF22' : '#00F5FF12', border: '1px solid #00F5FF30', color: '#00F5FF' }}
-          >
-            {copied === 'link' ? <><CheckCheck className="w-3 h-3" /> Copiado</> : <><Copy className="w-3 h-3" /> Copiar</>}
-          </button>
         </div>
       </div>
 

@@ -1,82 +1,269 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { Users, Copy, Check, TrendingUp, Network, DollarSign, Gift, Share2, UserCircle, Zap, Search, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Users, Copy, Check, DollarSign, Gift, Share2, TrendingUp, Zap, ArrowLeft, UserCircle2, ChevronRight, X, Crown, Network } from 'lucide-react'
+import type { TreeNode } from '@/app/api/network/route'
 
-// ── Colores por nivel ─────────────────────────────────────────────────────────
-const LEVEL_CFG = [
-  { color: '#00F5FF', label: 'Referidos directos' },
-  { color: '#FF2DF7', label: 'Nivel 2' },
-  { color: '#9B00FF', label: 'Nivel 3' },
-  { color: '#FFB800', label: 'Nivel 4' },
-  { color: '#00FF88', label: 'Nivel 5' },
-]
+// ── Level colors ───────────────────────────────────────────────────────────────
+const LEVELS = ['#00F5FF', '#FF2DF7', '#9B00FF', '#FFB800', '#00FF88']
+const LINE_COLOR = 'rgba(0,245,255,0.22)'
+function lvlColor(n: number) { return LEVELS[(n - 1) % LEVELS.length] }
 
-function getLevel(n: number) { return LEVEL_CFG[(n - 1) % LEVEL_CFG.length] }
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-interface LevelData {
-  level: number
-  count: number
-  active: number
-  members: { username: string; fullName: string; isActive: boolean }[]
-}
-interface BonusEntry {
-  id: string
-  amount: number
-  description: string | null
-  createdAt: string
-}
-interface NetworkData {
-  referralCode: string
-  levels: LevelData[]
-  recentBonuses: BonusEntry[]
-  stats: {
-    directReferrals: number
-    totalNetwork: number
-    totalActive: number
-    totalLevels: number
-    totalCommissions: number
-  }
-}
-interface FlatMember {
-  username: string
-  fullName: string
-  isActive: boolean
-  level: number
+// ── Plan config ────────────────────────────────────────────────────────────────
+const PLAN_CFG: Record<string, { label: string; color: string }> = {
+  NONE:  { label: 'Sin plan',    color: 'rgba(255,255,255,0.25)' },
+  BASIC: { label: 'Pack Básico', color: '#00F5FF' },
+  PRO:   { label: 'Pack Pro',    color: '#9B00FF' },
+  ELITE: { label: 'Pack Elite',  color: '#FFB800' },
 }
 
-// ── Avatar ────────────────────────────────────────────────────────────────────
-function AvatarNode({ name, active, color, size = 32 }: { name: string; active: boolean; color: string; size?: number }) {
+// ── CSS tree connectors ────────────────────────────────────────────────────────
+const TREE_CSS = `
+.mlm-children {
+  display: flex; flex-wrap: nowrap; position: relative;
+  padding-top: 28px; margin: 0; list-style: none; gap: 8px;
+}
+.mlm-children::before {
+  content: ''; position: absolute; top: 0; left: 50%;
+  width: 0; height: 28px; border-left: 1.5px solid ${LINE_COLOR};
+}
+.mlm-child {
+  display: flex; flex-direction: column; align-items: center;
+  position: relative; padding-top: 28px; min-width: 80px; flex: 1;
+}
+.mlm-child::before, .mlm-child::after {
+  content: ''; position: absolute; top: 0; height: 28px;
+}
+.mlm-child::before { right: 50%; width: 50%; border-top: 1.5px solid ${LINE_COLOR}; }
+.mlm-child::after  { left: 50%;  width: 50%; border-top: 1.5px solid ${LINE_COLOR}; border-left: 1.5px solid ${LINE_COLOR}; }
+.mlm-child:only-child::before, .mlm-child:only-child::after { display: none; }
+.mlm-child:first-child::before { border: none; }
+.mlm-child:last-child::after   { border-left: none; }
+.mlm-child:last-child::before  { border-right: 1.5px solid ${LINE_COLOR}; border-radius: 0 5px 0 0; }
+.mlm-child:first-child::after  { border-radius: 5px 0 0 0; }
+`
+
+// ── Detail modal ───────────────────────────────────────────────────────────────
+function DetailModal({ node, onClose }: { node: TreeNode; onClose: () => void }) {
+  const color  = lvlColor(node.level)
+  const plan   = PLAN_CFG[node.plan] ?? PLAN_CFG.NONE
+  const active = node.isActive
+
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
       <div
-        className="w-full h-full rounded-full flex items-center justify-center font-black text-white"
-        style={{
-          background: `${color}20`,
-          border: `1.5px solid ${color}50`,
-          fontSize: size > 32 ? 13 : 11,
-          boxShadow: active ? `0 0 8px ${color}40` : 'none',
-        }}
+        className="relative w-full max-w-sm rounded-3xl overflow-hidden z-10"
+        style={{ background: '#0f0f1a', border: `1px solid ${color}30`, boxShadow: `0 0 60px ${color}20` }}
+        onClick={e => e.stopPropagation()}
       >
-        {name.charAt(0).toUpperCase()}
+        {/* Top accent line */}
+        <div className="absolute top-0 left-0 right-0 h-px"
+          style={{ background: `linear-gradient(90deg, transparent, ${color}90, transparent)` }} />
+
+        {/* Header */}
+        <div className="px-6 pt-6 pb-5 flex items-center gap-4">
+          {/* Square avatar */}
+          <div className="relative shrink-0">
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black"
+              style={{
+                background: active ? 'rgba(0,255,136,0.12)' : 'rgba(239,68,68,0.12)',
+                border: `2.5px solid ${active ? 'rgba(0,255,136,0.5)' : 'rgba(239,68,68,0.5)'}`,
+                color: active ? '#00FF88' : '#ef4444',
+                boxShadow: active ? '0 0 20px rgba(0,255,136,0.25)' : '0 0 20px rgba(239,68,68,0.25)',
+              }}
+            >
+              {node.fullName.charAt(0).toUpperCase()}
+            </div>
+            {/* Status badge */}
+            <span
+              className="absolute -bottom-1 -right-1 text-[8px] font-black px-1.5 py-0.5 rounded-full border"
+              style={{
+                background: active ? 'rgba(0,255,136,0.15)' : 'rgba(239,68,68,0.15)',
+                borderColor: active ? 'rgba(0,255,136,0.4)' : 'rgba(239,68,68,0.4)',
+                color: active ? '#00FF88' : '#ef4444',
+              }}
+            >
+              {active ? 'Activo' : 'Inactivo'}
+            </span>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-black text-white truncate">{node.fullName}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>@{node.username}</p>
+            <div className="flex items-center gap-1.5 mt-2">
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
+                style={{ background: `${color}15`, border: `1px solid ${color}35`, color }}>
+                Nivel {node.level}
+              </span>
+            </div>
+          </div>
+
+          <button onClick={onClose}
+            className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <X size={14} style={{ color: 'rgba(255,255,255,0.4)' }} />
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div className="mx-6 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 gap-3 p-6">
+
+          {/* Plan */}
+          <div className="col-span-2 rounded-2xl p-4 flex items-center gap-3"
+            style={{ background: `${plan.color === 'rgba(255,255,255,0.25)' ? 'rgba(255,255,255,0.04)' : plan.color + '12'}`, border: `1px solid ${plan.color === 'rgba(255,255,255,0.25)' ? 'rgba(255,255,255,0.08)' : plan.color + '35'}` }}>
+            <Crown size={16} style={{ color: plan.color }} />
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>Plan adquirido</p>
+              <p className="text-sm font-black mt-0.5" style={{ color: plan.color }}>{plan.label}</p>
+            </div>
+          </div>
+
+          {/* Direct referrals */}
+          <div className="rounded-2xl p-4"
+            style={{ background: `${color}0D`, border: `1px solid ${color}25` }}>
+            <Network size={14} className="mb-2" style={{ color }} />
+            <p className="text-2xl font-black tracking-tighter" style={{ color }}>{node.directCount}</p>
+            <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5 text-white/25">Referidos directos</p>
+          </div>
+
+          {/* Status */}
+          <div className="rounded-2xl p-4"
+            style={{
+              background: active ? 'rgba(0,255,136,0.08)' : 'rgba(239,68,68,0.08)',
+              border: `1px solid ${active ? 'rgba(0,255,136,0.2)' : 'rgba(239,68,68,0.2)'}`,
+            }}>
+            <div className="w-3.5 h-3.5 rounded-sm mb-2"
+              style={{ background: active ? '#00FF88' : '#ef4444', boxShadow: active ? '0 0 8px #00FF88' : '0 0 8px #ef4444' }} />
+            <p className="text-sm font-black" style={{ color: active ? '#00FF88' : '#ef4444' }}>
+              {active ? 'Activo' : 'Inactivo'}
+            </p>
+            <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5 text-white/25">Estado</p>
+          </div>
+        </div>
       </div>
-      <div
-        className="absolute -bottom-0.5 -right-0.5 rounded-full border border-[#0a0a0f]"
-        style={{ width: 8, height: 8, background: active ? '#00FF88' : 'rgba(255,255,255,0.15)' }}
-      />
     </div>
   )
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
-export default function NetworkPage() {
-  const [data, setData] = useState<NetworkData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [copied, setCopied] = useState(false)
-  const [search, setSearch] = useState('')
-  const [levelFilter, setLevelFilter] = useState<'all' | number>('all')
+// ── Child node card ────────────────────────────────────────────────────────────
+function ChildCard({ node, onNavigate, onDetail }: { node: TreeNode; onNavigate: () => void; onDetail: () => void }) {
+  const color  = lvlColor(node.level)
+  const active = node.isActive
 
+  return (
+    <div className="flex flex-col items-center gap-1.5 select-none" style={{ width: 80 }}>
+
+      {/* Square avatar */}
+      <div
+        className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black cursor-pointer transition-all active:scale-90 relative"
+        style={{
+          background: active ? 'rgba(0,255,136,0.1)' : 'rgba(239,68,68,0.1)',
+          border: `2px solid ${active ? 'rgba(0,255,136,0.45)' : 'rgba(239,68,68,0.45)'}`,
+          color: active ? '#00FF88' : '#ef4444',
+          boxShadow: active ? '0 0 14px rgba(0,255,136,0.25)' : '0 0 14px rgba(239,68,68,0.2)',
+        }}
+        onClick={onDetail}
+      >
+        {node.fullName.charAt(0).toUpperCase()}
+
+        {/* Level dot top-right */}
+        <span
+          className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black border border-[#0b0b14]"
+          style={{ background: color, color: '#000', boxShadow: `0 0 6px ${color}80` }}
+        >
+          {node.level}
+        </span>
+      </div>
+
+      {/* Name */}
+      <p className="text-[10px] font-bold text-center leading-tight w-full truncate px-1"
+        style={{ color: 'rgba(255,255,255,0.8)' }}>
+        {node.fullName.split(' ')[0]}
+      </p>
+
+      {/* Sub-refs button or label */}
+      {node.directCount > 0 ? (
+        <button
+          onClick={onNavigate}
+          className="text-[9px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-0.5 transition-all active:scale-95"
+          style={{ background: `${color}15`, border: `1px solid ${color}35`, color }}
+        >
+          <ChevronRight size={8} /> {node.directCount} refs
+        </button>
+      ) : (
+        <span className="text-[8px] px-1.5 py-0.5 rounded-full"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.2)' }}>
+          sin refs
+        </span>
+      )}
+    </div>
+  )
+}
+
+// ── Root card (large, always "Tú" or selected person) ─────────────────────────
+function RootCard({ name, username, isActive, color, isYou }: { name: string; username: string; isActive: boolean; color: string; isYou: boolean }) {
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="relative">
+        {isYou && (
+          <div className="absolute inset-0 rounded-3xl animate-ping opacity-15"
+            style={{ background: color, animationDuration: '2.5s' }} />
+        )}
+        <div
+          className="relative w-20 h-20 rounded-3xl flex items-center justify-center text-2xl font-black"
+          style={{
+            background: isYou ? `${color}18` : (isActive ? 'rgba(0,255,136,0.12)' : 'rgba(239,68,68,0.12)'),
+            border: `3px solid ${isYou ? color + '70' : (isActive ? 'rgba(0,255,136,0.5)' : 'rgba(239,68,68,0.5)')}`,
+            color: isYou ? color : (isActive ? '#00FF88' : '#ef4444'),
+            boxShadow: `0 0 30px ${isYou ? color + '30' : (isActive ? 'rgba(0,255,136,0.2)' : 'rgba(239,68,68,0.2)')}`,
+          }}
+        >
+          {isYou ? <UserCircle2 size={34} /> : name.charAt(0).toUpperCase()}
+        </div>
+        {/* Active/inactive indicator */}
+        <span
+          className="absolute -bottom-1 -right-1 text-[9px] font-black px-1.5 py-0.5 rounded-full border"
+          style={{
+            background: isActive ? 'rgba(0,255,136,0.15)' : 'rgba(239,68,68,0.15)',
+            borderColor: isActive ? 'rgba(0,255,136,0.4)' : 'rgba(239,68,68,0.4)',
+            color: isActive ? '#00FF88' : '#ef4444',
+          }}
+        >
+          {isActive ? 'Activo' : 'Inactivo'}
+        </span>
+      </div>
+      <p className="text-sm font-black mt-1" style={{ color: isYou ? color : (isActive ? '#00FF88' : '#ef4444') }}>
+        {isYou ? name : name.split(' ')[0]}
+      </p>
+      <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+        @{username}{isYou ? ' · Tú' : ''}
+      </p>
+    </div>
+  )
+}
+
+// ── Network types ──────────────────────────────────────────────────────────────
+interface BonusEntry { id: string; amount: number; description: string | null; createdAt: string }
+interface NetworkData {
+  referralCode: string
+  user: { fullName: string; username: string; isActive: boolean }
+  tree: TreeNode[]
+  stats: { directReferrals: number; totalNetwork: number; totalActive: number; totalCommissions: number }
+  recentBonuses: BonusEntry[]
+}
+
+// ── Main page ──────────────────────────────────────────────────────────────────
+export default function NetworkPage() {
+  const [data, setData]       = useState<NetworkData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [copied, setCopied]   = useState(false)
+  const [path, setPath]       = useState<TreeNode[]>([])
+  const [detail, setDetail]   = useState<TreeNode | null>(null)
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
   useEffect(() => {
@@ -93,22 +280,6 @@ export default function NetworkPage() {
     setTimeout(() => setCopied(false), 2500)
   }
 
-  // Flatten all members with their level
-  const allMembers = useMemo<FlatMember[]>(() => {
-    if (!data) return []
-    return data.levels.flatMap(lv => lv.members.map(m => ({ ...m, level: lv.level })))
-  }, [data])
-
-  // Filtered members
-  const filteredMembers = useMemo(() => {
-    const q = search.toLowerCase()
-    return allMembers.filter(m => {
-      const matchLevel = levelFilter === 'all' || m.level === levelFilter
-      const matchSearch = !q || m.fullName.toLowerCase().includes(q) || m.username.toLowerCase().includes(q)
-      return matchLevel && matchSearch
-    })
-  }, [allMembers, search, levelFilter])
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -121,57 +292,60 @@ export default function NetworkPage() {
   if (!data) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <p className="text-white/30 text-sm">Error al cargar la red</p>
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.25)' }}>Error al cargar la red</p>
       </div>
     )
   }
 
-  const { stats, levels, referralCode, recentBonuses } = data
-  const activePct = stats.totalNetwork > 0 ? Math.round((stats.totalActive / stats.totalNetwork) * 100) : 0
+  const { stats, tree, referralCode, recentBonuses, user } = data
+  const activePct       = stats.totalNetwork > 0 ? Math.round((stats.totalActive / stats.totalNetwork) * 100) : 0
+  const currentNode     = path[path.length - 1] ?? null
+  const currentChildren = currentNode ? currentNode.children : tree
+  const rootColor       = currentNode ? lvlColor(currentNode.level) : '#00F5FF'
 
   return (
-    <div className="px-4 md:px-6 pt-6 max-w-4xl mx-auto pb-24 text-white space-y-6">
+    <div className="px-4 md:px-6 pt-6 max-w-2xl mx-auto pb-24 text-white space-y-5">
+      <style>{TREE_CSS}</style>
+
+      {/* Detail modal */}
+      {detail && <DetailModal node={detail} onClose={() => setDetail(null)} />}
 
       {/* ── HEADER ── */}
-      <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-xl flex items-center justify-center"
-          style={{ background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)' }}>
-          <Network className="w-5 h-5" style={{ color: '#00F5FF' }} />
-        </div>
-        <div>
-          <h1 className="text-xl font-medium text-white uppercase tracking-widest">Mi Red Uninivel</h1>
-          <p className="text-xs font-light tracking-widest mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            {stats.totalNetwork} miembros en {stats.totalLevels} niveles
-          </p>
-        </div>
+      <div>
+        <h1 className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
+          <Users size={18} style={{ color: '#00F5FF' }} /> Mi Red Unilevel
+        </h1>
+        <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          {stats.totalNetwork} miembros · {stats.totalActive} activos
+        </p>
       </div>
 
-      {/* ── STATS CARDS ── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: 'Red total',  val: stats.totalNetwork,                     from: '#00F5FF', to: '#0066FF',  icon: Users },
-          { label: 'Activos',    val: stats.totalActive,                      from: '#00FF88', to: '#00C2FF',  icon: TrendingUp },
-          { label: 'Directos',   val: stats.directReferrals,                  from: '#FF2DF7', to: '#9B00FF',  icon: Network },
-          { label: 'Comisiones', val: `$${stats.totalCommissions.toFixed(2)}`, from: '#FFB800', to: '#FF5C00', icon: DollarSign },
-        ].map((s, i) => (
-          <div key={i} className="relative rounded-2xl p-4 overflow-hidden border"
-            style={{ background: `linear-gradient(135deg, ${s.from}12, ${s.to}08)`, borderColor: `${s.from}25` }}>
+      {/* ── STATS ── */}
+      <div className="grid grid-cols-2 gap-3">
+        {([
+          { label: 'Red total',  val: stats.totalNetwork,                      color: '#00F5FF', Icon: Users },
+          { label: 'Activos',    val: stats.totalActive,                       color: '#00FF88', Icon: TrendingUp },
+          { label: 'Directos',   val: stats.directReferrals,                   color: '#FF2DF7', Icon: Zap },
+          { label: 'Comisiones', val: `$${stats.totalCommissions.toFixed(2)}`, color: '#FFB800', Icon: DollarSign },
+        ] as const).map((s, i) => (
+          <div key={i} className="relative rounded-2xl p-4 overflow-hidden"
+            style={{ background: `${s.color}0D`, border: `1px solid ${s.color}28` }}>
             <div className="absolute top-0 left-0 right-0 h-px"
-              style={{ background: `linear-gradient(90deg, transparent, ${s.from}80, transparent)` }} />
-            <s.icon className="w-4 h-4 mb-2" style={{ color: s.from }} />
-            <p className="text-2xl font-black tracking-tighter" style={{ color: s.from }}>{s.val}</p>
-            <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5 text-white/30">{s.label}</p>
+              style={{ background: `linear-gradient(90deg, transparent, ${s.color}80, transparent)` }} />
+            <s.Icon size={14} className="mb-2" style={{ color: s.color }} />
+            <p className="text-2xl font-black tracking-tighter" style={{ color: s.color }}>{s.val}</p>
+            <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5 text-white/25">{s.label}</p>
           </div>
         ))}
       </div>
 
-      {/* ── REFERRAL BANNER ── */}
-      <div className="relative rounded-2xl overflow-hidden p-4"
-        style={{ background: 'linear-gradient(135deg, rgba(0,245,255,0.06), rgba(155,0,255,0.06))', border: '1px solid rgba(0,245,255,0.15)' }}>
+      {/* ── REFERRAL LINK ── */}
+      <div className="relative rounded-2xl p-4 overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, rgba(0,245,255,0.05), rgba(155,0,255,0.05))', border: '1px solid rgba(0,245,255,0.15)' }}>
         <div className="absolute top-0 left-0 right-0 h-px"
           style={{ background: 'linear-gradient(90deg, transparent, #00F5FF, #FF2DF7, transparent)' }} />
-        <div className="flex items-center gap-2 mb-2">
-          <Share2 className="w-3.5 h-3.5" style={{ color: '#00F5FF' }} />
+        <div className="flex items-center gap-2 mb-2.5">
+          <Share2 size={12} style={{ color: '#00F5FF' }} />
           <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#00F5FF' }}>Tu link de referido</p>
           <span className="ml-auto text-[10px] font-black px-2 py-0.5 rounded-full"
             style={{ background: 'rgba(0,245,255,0.1)', border: '1px solid rgba(0,245,255,0.25)', color: '#00F5FF' }}>
@@ -180,205 +354,137 @@ export default function NetworkPage() {
         </div>
         <div className="flex items-center gap-2">
           <div className="flex-1 min-w-0 rounded-xl px-3 py-2 font-mono text-xs truncate"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.45)' }}>
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.4)' }}>
             {baseUrl}/register?ref={referralCode}
           </div>
-          <button
-            onClick={copyLink}
-            className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-[0.97]"
+          <button onClick={copyLink}
+            className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95"
             style={{
               background: copied ? 'rgba(0,255,136,0.15)' : 'rgba(0,245,255,0.12)',
               border: `1px solid ${copied ? 'rgba(0,255,136,0.35)' : 'rgba(0,245,255,0.3)'}`,
               color: copied ? '#00FF88' : '#00F5FF',
-            }}
-          >
+            }}>
             {copied ? <><Check size={12} /> Copiado</> : <><Copy size={12} /> Copiar</>}
           </button>
         </div>
       </div>
 
-      {/* ── RESUMEN POR NIVELES ── */}
-      {levels.length > 0 && (
-        <div className="rounded-2xl p-5"
-          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <p className="text-[10px] font-black uppercase tracking-widest text-white/25 mb-5 text-center">Estructura por niveles</p>
+      {/* ── ÁRBOL GENEALÓGICO ── */}
+      <div className="rounded-2xl overflow-hidden"
+        style={{ background: 'rgba(255,255,255,0.018)', border: '1px solid rgba(255,255,255,0.07)' }}>
 
-          {/* YOU node */}
-          <div className="flex flex-col items-center mb-2">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center"
-              style={{ background: 'rgba(0,245,255,0.12)', border: '2px solid rgba(0,245,255,0.5)', boxShadow: '0 0 20px rgba(0,245,255,0.2)' }}>
-              <UserCircle className="w-6 h-6" style={{ color: '#00F5FF' }} />
-            </div>
-            <p className="text-[9px] font-black uppercase tracking-widest mt-1.5" style={{ color: '#00F5FF' }}>Tú</p>
-          </div>
-
-          {/* Level rows */}
-          <div className="flex flex-col items-center">
-            {levels.map((level) => {
-              const cfg = getLevel(level.level)
-              const pct = level.count > 0 ? (level.active / level.count) * 100 : 0
-              return (
-                <div key={level.level} className="flex flex-col items-center w-full max-w-md">
-                  {/* Connector */}
-                  <div className="flex flex-col items-center">
-                    <div className="w-px h-3" style={{ background: `${cfg.color}50` }} />
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.color, boxShadow: `0 0 5px ${cfg.color}` }} />
-                    <div className="w-px h-2" style={{ background: `${cfg.color}40` }} />
-                  </div>
-                  {/* Bar */}
-                  <div className="w-full rounded-xl px-4 py-3 flex items-center gap-3"
-                    style={{ background: `${cfg.color}08`, border: `1px solid ${cfg.color}20` }}>
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0"
-                      style={{ background: `${cfg.color}20`, border: `1px solid ${cfg.color}40`, color: cfg.color }}>
-                      {level.level}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[11px] font-bold" style={{ color: cfg.color }}>
-                          {level.level === 1 ? 'Referidos directos' : `Nivel ${level.level}`}
-                        </span>
-                        <span className="text-base font-black" style={{ color: cfg.color }}>{level.count}</span>
-                      </div>
-                      <div className="h-1 rounded-full bg-white/5 overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${cfg.color}70, ${cfg.color})` }} />
-                      </div>
-                      <div className="flex justify-between mt-1">
-                        <span className="text-[9px]" style={{ color: '#00FF88' }}>{level.active} activos</span>
-                        <span className="text-[9px] text-white/25">{level.count - level.active} inactivos</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── TODA LA RED ── */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] font-black uppercase tracking-widest text-white/25">Toda la red</p>
-          <span className="text-[10px] text-white/30">{filteredMembers.length} miembros</span>
+        {/* Title */}
+        <div className="px-4 py-3 flex items-center gap-2"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <p className="text-[10px] font-black uppercase tracking-widest text-white/30 flex-1">Árbol genealógico</p>
+          <span className="text-[9px] text-white/15">Toca el avatar para ver detalles</span>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre o usuario..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-9 py-2.5 rounded-xl text-sm text-white placeholder-white/25 focus:outline-none transition-colors"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/50 transition-colors"
-            >
-              <X size={13} />
+        {/* Breadcrumb */}
+        {path.length > 0 && (
+          <div className="px-4 pt-3 flex items-center gap-1 flex-wrap">
+            <button onClick={() => setPath([])}
+              className="flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-lg"
+              style={{ color: '#00F5FF', background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)' }}>
+              <ArrowLeft size={10} /> Tú
             </button>
-          )}
-        </div>
-
-        {/* Level filter tabs */}
-        {levels.length > 0 && (
-          <div className="flex gap-1 flex-wrap">
-            <button
-              onClick={() => setLevelFilter('all')}
-              className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all"
-              style={{
-                background: levelFilter === 'all' ? 'rgba(0,245,255,0.15)' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${levelFilter === 'all' ? 'rgba(0,245,255,0.4)' : 'rgba(255,255,255,0.08)'}`,
-                color: levelFilter === 'all' ? '#00F5FF' : 'rgba(255,255,255,0.3)',
-              }}
-            >
-              Todos ({allMembers.length})
-            </button>
-            {levels.map(level => {
-              const cfg = getLevel(level.level)
-              const active = levelFilter === level.level
-              return (
+            {path.map((node, idx) => (
+              <div key={node.id} className="flex items-center gap-1">
+                <ChevronRight size={10} style={{ color: 'rgba(255,255,255,0.2)' }} />
                 <button
-                  key={level.level}
-                  onClick={() => setLevelFilter(level.level)}
-                  className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all"
+                  onClick={() => setPath(p => p.slice(0, idx + 1))}
+                  className="text-[10px] font-black px-2 py-1 rounded-lg transition-colors"
                   style={{
-                    background: active ? `${cfg.color}15` : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${active ? `${cfg.color}40` : 'rgba(255,255,255,0.08)'}`,
-                    color: active ? cfg.color : 'rgba(255,255,255,0.3)',
-                  }}
-                >
-                  N{level.level} ({level.count})
+                    color: idx === path.length - 1 ? lvlColor(node.level) : 'rgba(255,255,255,0.4)',
+                    background: idx === path.length - 1 ? `${lvlColor(node.level)}12` : 'transparent',
+                    border: idx === path.length - 1 ? `1px solid ${lvlColor(node.level)}30` : '1px solid transparent',
+                  }}>
+                  {node.fullName.split(' ')[0]}
                 </button>
-              )
-            })}
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Member list */}
-        {allMembers.length === 0 ? (
-          <div className="text-center py-14 rounded-3xl"
-            style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.08)' }}>
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
-              style={{ background: 'rgba(0,245,255,0.05)', border: '1px solid rgba(0,245,255,0.1)' }}>
-              <Users className="w-6 h-6 text-white/20" />
-            </div>
-            <p className="text-white/30 text-sm font-bold mb-1">Aún no tienes referidos</p>
-            <p className="text-white/15 text-xs">Comparte tu link y empieza a construir tu red</p>
-          </div>
-        ) : filteredMembers.length === 0 ? (
-          <div className="text-center py-10 rounded-2xl"
-            style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.06)' }}>
-            <p className="text-white/30 text-sm">Sin resultados para &ldquo;{search}&rdquo;</p>
-          </div>
-        ) : (
-          <div className="rounded-2xl overflow-hidden divide-y divide-white/[0.04]"
-            style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}>
-            {filteredMembers.map((m, i) => {
-              const cfg = getLevel(m.level)
-              return (
-                <div key={`${m.level}-${m.username}-${i}`} className="flex items-center gap-3 px-4 py-3">
-                  <AvatarNode name={m.fullName} active={m.isActive} color={cfg.color} size={32} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white/85 truncate">{m.fullName}</p>
-                    <p className="text-[10px] text-white/30 truncate">@{m.username}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
-                      style={{ background: `${cfg.color}15`, border: `1px solid ${cfg.color}30`, color: cfg.color }}>
-                      N{m.level}
-                    </span>
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
-                      style={{
-                        background: m.isActive ? 'rgba(0,255,136,0.1)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${m.isActive ? 'rgba(0,255,136,0.25)' : 'rgba(255,255,255,0.08)'}`,
-                        color: m.isActive ? '#00FF88' : 'rgba(255,255,255,0.2)',
-                      }}>
-                      {m.isActive ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </div>
+        {/* Tree */}
+        <div className="p-5 overflow-x-auto">
+          <div className="flex flex-col items-center" style={{ minWidth: 'max-content', margin: '0 auto' }}>
+
+            {/* Root */}
+            <RootCard
+              name={currentNode ? currentNode.fullName : user.fullName}
+              username={currentNode ? currentNode.username : user.username}
+              isActive={currentNode ? currentNode.isActive : user.isActive}
+              color={rootColor}
+              isYou={!currentNode}
+            />
+
+            {/* Empty */}
+            {currentChildren.length === 0 ? (
+              <div className="mt-8 text-center px-6 py-8 rounded-2xl"
+                style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.08)', minWidth: 260 }}>
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center mx-auto mb-3"
+                  style={{ background: 'rgba(0,245,255,0.05)', border: '1px solid rgba(0,245,255,0.1)' }}>
+                  <Users size={18} className="text-white/15" />
                 </div>
-              )
-            })}
+                <p className="text-white/30 text-sm font-bold mb-1">
+                  {!currentNode ? 'Aún no tienes referidos' : 'Sin referidos directos'}
+                </p>
+                <p className="text-white/15 text-xs">
+                  {!currentNode ? 'Comparte tu link y empieza a construir tu red' : 'Esta persona todavía no ha referido a nadie'}
+                </p>
+              </div>
+            ) : (
+              <ul className="mlm-children">
+                {currentChildren.map(node => (
+                  <li key={node.id} className="mlm-child">
+                    <ChildCard
+                      node={node}
+                      onNavigate={() => setPath(p => [...p, node])}
+                      onDetail={() => setDetail(node)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        {/* Legend */}
+        {stats.totalNetwork > 0 && (
+          <div className="px-4 pb-4 pt-3 flex flex-wrap gap-x-3 gap-y-1.5"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(0,255,136,0.6)', border: '1px solid rgba(0,255,136,0.6)' }} />
+              <span className="text-[9px] font-bold text-white/25">Activo</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(239,68,68,0.6)', border: '1px solid rgba(239,68,68,0.6)' }} />
+              <span className="text-[9px] font-bold text-white/25">Inactivo</span>
+            </div>
+            {LEVELS.map((color, i) => (
+              <div key={i} className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ background: color, boxShadow: `0 0 5px ${color}60` }} />
+                <span className="text-[9px] font-bold text-white/20">N{i + 1}</span>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      {/* ── ACTIVIDAD GLOBAL ── */}
+      {/* ── ACTIVIDAD ── */}
       {stats.totalNetwork > 0 && (
         <div className="rounded-2xl p-4"
           style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2.5">
             <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4" style={{ color: '#00FF88' }} />
-              <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Actividad de la red</p>
+              <Zap size={14} style={{ color: '#00FF88' }} />
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/35">Actividad de la red</p>
             </div>
             <span className="text-sm font-black" style={{ color: '#00FF88' }}>{activePct}%</span>
           </div>
-          <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
             <div className="h-full rounded-full transition-all duration-1000"
               style={{ width: `${activePct}%`, background: 'linear-gradient(90deg, #00C2FF, #00FF88)' }} />
           </div>
@@ -395,18 +501,18 @@ export default function NetworkPage() {
         {recentBonuses.length === 0 ? (
           <div className="text-center py-10 rounded-3xl"
             style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.08)' }}>
-            <Gift className="w-6 h-6 text-white/15 mx-auto mb-2" />
+            <Gift size={22} className="mx-auto mb-2 text-white/15" />
             <p className="text-white/25 text-xs">Aún no tienes bonos registrados</p>
-            <p className="text-white/15 text-[11px] mt-1">Cuando alguien de tu red active un plan recibirás el 20%</p>
+            <p className="text-white/15 text-[11px] mt-1">Cuando alguien active un plan recibirás el 20%</p>
           </div>
         ) : (
           <div className="rounded-2xl overflow-hidden divide-y divide-white/[0.04]"
             style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
-            {recentBonuses.map((bonus) => (
+            {recentBonuses.map(bonus => (
               <div key={bonus.id} className="flex items-center gap-3 px-4 py-3">
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
                   style={{ background: 'rgba(255,184,0,0.1)', border: '1px solid rgba(255,184,0,0.2)' }}>
-                  <Gift className="w-4 h-4" style={{ color: '#FFB800' }} />
+                  <Gift size={14} style={{ color: '#FFB800' }} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-white/70 truncate">{bonus.description ?? 'Bono de patrocinio'}</p>

@@ -48,7 +48,6 @@ export async function getAuthUser() {
 
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      include: { binaryPosition: true },
     })
 
     if (!user) {
