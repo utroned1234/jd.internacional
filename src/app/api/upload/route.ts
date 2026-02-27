@@ -14,7 +14,10 @@ export async function POST(request: NextRequest) {
         const bytes = await file.arrayBuffer()
         const buffer = Buffer.from(bytes)
 
-        const ext = file.name.split('.').pop()
+        // Fallback extension from MIME type (some mobile cameras omit extension)
+        const mimeExt: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/heic': 'heic' }
+        const extFromName = file.name.includes('.') ? file.name.split('.').pop() : null
+        const ext = extFromName || mimeExt[file.type] || 'jpg'
         const fileName = `${randomUUID()}.${ext}`
 
         // Subir a Supabase Storage

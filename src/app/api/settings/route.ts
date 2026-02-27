@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+// Never cache — QR and prices must always be fresh
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // Public endpoint — returns only non-sensitive settings users need
 const PUBLIC_KEYS = ['PAYMENT_QR_URL', 'PRICE_BASIC', 'PRICE_PRO', 'PRICE_ELITE']
 
@@ -13,7 +17,9 @@ export async function GET() {
     const map: Record<string, string> = {}
     settings.forEach(s => { map[s.key] = s.value })
 
-    return NextResponse.json({ settings: map })
+    return NextResponse.json({ settings: map }, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+    })
   } catch (err) {
     console.error('[GET /api/settings]', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
