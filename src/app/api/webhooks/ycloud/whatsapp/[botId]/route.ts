@@ -38,9 +38,6 @@ export async function POST(
 
     const payload = await request.json()
 
-    // 🔍 DEBUG TEMPORAL – ver el payload real de YCloud
-    console.log('[WEBHOOK] Payload recibido:', JSON.stringify(payload, null, 2))
-
     // Process asynchronously – respond immediately to avoid YCloud timeout
     BotEngine.handleWebhook(botId, payload).catch(err => {
       console.error(`[WEBHOOK] BotEngine error for bot ${botId}:`, err)
