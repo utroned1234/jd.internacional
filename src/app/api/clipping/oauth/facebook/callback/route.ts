@@ -15,12 +15,19 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   const error = searchParams.get('error')
+  const stateFromUrl = searchParams.get('state')
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://jd-internacional.onrender.com'
   const redirectBase = `${appUrl}/dashboard/services/clipping`
 
   if (error || !code) {
     return NextResponse.redirect(`${redirectBase}?error=facebook_denied`)
+  }
+
+  const cookieStore = cookies()
+  const stateFromCookie = cookieStore.get('fb_clipping_state')?.value
+  if (!stateFromCookie || stateFromUrl !== stateFromCookie) {
+    return NextResponse.redirect(`${redirectBase}?error=facebook_state_mismatch`)
   }
 
   const auth = getAuth()

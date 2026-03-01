@@ -8,7 +8,7 @@ export class TikTokAdapter implements IAdsAdapter {
     private clientSecret = process.env.TIKTOK_CLIENT_SECRET
     private redirectUri = process.env.TIKTOK_REDIRECT_URI
 
-    getAuthUrl(): string {
+    getAuthUrl(state?: string): string {
         const scopes = ['ads.management', 'ads.stats']
         return `https://business-api.tiktok.com/portal/auth?app_id=${this.clientKey}&state=tt&redirect_uri=${this.redirectUri}`
     }

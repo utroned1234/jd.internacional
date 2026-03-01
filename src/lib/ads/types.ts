@@ -68,7 +68,7 @@ export interface PublishResult {
 export interface IAdsAdapter {
     platform: AdPlatform
 
-    getAuthUrl(): string
+    getAuthUrl(state?: string): string
     exchangeCodeForToken(code: string): Promise<{
         accessToken: string
         refreshToken?: string

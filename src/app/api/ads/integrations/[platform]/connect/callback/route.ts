@@ -16,8 +16,16 @@ export async function GET(
 
     const { searchParams } = new URL(req.url)
     const code = searchParams.get('code')
+    const stateFromUrl = searchParams.get('state')
 
     if (!code) return NextResponse.json({ error: 'No code provided' }, { status: 400 })
+
+    const cookieHeader = req.headers.get('cookie') || ''
+    const stateFromCookie = cookieHeader.match(/ads_oauth_state=([^;]+)/)?.[1]
+    if (stateFromCookie && stateFromUrl !== stateFromCookie) {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${new URL(req.url).host}`
+        return NextResponse.redirect(new URL('/dashboard/services/ads?error=state_mismatch', appUrl))
+    }
 
     const platform = params.platform.toUpperCase() as AdPlatform
     try {

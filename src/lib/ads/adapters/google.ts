@@ -9,7 +9,7 @@ export class GoogleAdsAdapter implements IAdsAdapter {
     private developerToken = process.env.GOOGLE_DEVELOPER_TOKEN
     private redirectUri = process.env.GOOGLE_REDIRECT_URI
 
-    getAuthUrl(): string {
+    getAuthUrl(state?: string): string {
         const scopes = ['https://www.googleapis.com/auth/adwords']
         return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${this.clientId}&redirect_uri=${this.redirectUri}&scope=${scopes.join(' ')}&response_type=code&access_type=offline&prompt=consent`
     }

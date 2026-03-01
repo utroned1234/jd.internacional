@@ -11,7 +11,7 @@ export class MetaAdapter implements IAdsAdapter {
     private appSecret = process.env.META_APP_SECRET
     private redirectUri = process.env.META_REDIRECT_URI
 
-    getAuthUrl(): string {
+    getAuthUrl(state?: string): string {
         if (!this.appId || !this.appSecret || !this.redirectUri) {
             throw new Error('Meta App configuration (ID, Secret, Redirect URI) is missing in environment variables.')
         }
@@ -31,7 +31,8 @@ export class MetaAdapter implements IAdsAdapter {
             client_id: this.appId!,
             redirect_uri: this.redirectUri!,
             scope: scopes.join(','),
-            response_type: 'code'
+            response_type: 'code',
+            ...(state ? { state } : {})
         })
         return `https://www.facebook.com/${this.apiVersion}/dialog/oauth?${params.toString()}`
     }
