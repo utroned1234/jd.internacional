@@ -29,6 +29,22 @@ function extractTikTokId(url: string): string | null {
   return match ? match[1] : null
 }
 
+function extractFacebookVideoId(url: string): string | null {
+  // https://www.facebook.com/username/videos/1234567890/
+  // https://www.facebook.com/watch/?v=1234567890
+  // https://fb.watch/abc123/ — not parseable directly, reject
+  const patterns = [
+    /videos\/(\d+)/,
+    /[?&]v=(\d+)/,
+    /story_fbid=(\d+)/,
+  ]
+  for (const pattern of patterns) {
+    const match = url.match(pattern)
+    if (match) return match[1]
+  }
+  return null
+}
+
 /** GET /api/clipping/submissions — list my submissions */
 export async function GET() {
   try {
@@ -90,6 +106,8 @@ export async function POST(request: NextRequest) {
       videoId = extractYouTubeId(videoUrl)
     } else if (campaign.platform === 'TIKTOK') {
       videoId = extractTikTokId(videoUrl)
+    } else if (campaign.platform === 'FACEBOOK') {
+      videoId = extractFacebookVideoId(videoUrl)
     }
 
     if (!videoId) {
@@ -134,6 +152,15 @@ export async function POST(request: NextRequest) {
         const video = ttData.data?.videos?.[0]
         baseViews = video?.view_count || 0
         videoTitle = video?.title || ''
+      }
+    } else if (campaign.platform === 'FACEBOOK') {
+      const fbRes = await fetch(
+        `https://graph.facebook.com/v19.0/${videoId}?fields=views,title&access_token=${accessToken}`
+      )
+      if (fbRes.ok) {
+        const fbData = await fbRes.json()
+        baseViews = fbData.views || 0
+        videoTitle = fbData.title || ''
       }
     }
 

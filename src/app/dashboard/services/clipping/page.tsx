@@ -10,7 +10,7 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Platform = 'YOUTUBE' | 'TIKTOK'
+type Platform = 'YOUTUBE' | 'TIKTOK' | 'FACEBOOK'
 
 interface ConnectedAccount {
   id: string
@@ -55,11 +55,13 @@ interface Submission {
 const PLATFORM_COLOR: Record<Platform, string> = {
   YOUTUBE: '#FF0000',
   TIKTOK: '#00F2EA',
+  FACEBOOK: '#1877F2',
 }
 
 const PLATFORM_LABEL: Record<Platform, string> = {
   YOUTUBE: 'YouTube',
   TIKTOK: 'TikTok',
+  FACEBOOK: 'Facebook',
 }
 
 const STATUS_CONFIG = {
@@ -72,6 +74,14 @@ function TikTokIcon({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
       <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.78a8.18 8.18 0 004.78 1.52V6.84a4.85 4.85 0 01-1.01-.15z" />
+    </svg>
+  )
+}
+
+function FacebookIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
     </svg>
   )
 }
@@ -139,10 +149,12 @@ function ClippingPageInner() {
   }, [searchParams, router, fetchAll])
 
   const connectAccount = (platform: Platform) => {
-    const route = platform === 'YOUTUBE'
-      ? '/api/clipping/oauth/youtube/connect'
-      : '/api/clipping/oauth/tiktok/connect'
-    window.location.href = route
+    const routes: Record<Platform, string> = {
+      YOUTUBE: '/api/clipping/oauth/youtube/connect',
+      TIKTOK: '/api/clipping/oauth/tiktok/connect',
+      FACEBOOK: '/api/clipping/oauth/facebook/connect',
+    }
+    window.location.href = routes[platform]
   }
 
   const disconnectAccount = async (platform: Platform) => {
@@ -233,7 +245,7 @@ function ClippingPageInner() {
           <div>
             <h1 className="text-xl font-medium text-white uppercase tracking-widest">Clipping</h1>
             <p className="text-xs font-light tracking-widest mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
-              Gana dinero por vistas en YouTube y TikTok
+              Gana dinero por vistas en YouTube, TikTok y Facebook
             </p>
           </div>
         </div>
@@ -265,10 +277,15 @@ function ClippingPageInner() {
         style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
         <h2 className="text-sm font-semibold text-white uppercase tracking-widest">Cuentas conectadas</h2>
 
-        {(['YOUTUBE', 'TIKTOK'] as Platform[]).map(platform => {
+        {(['YOUTUBE', 'TIKTOK', 'FACEBOOK'] as Platform[]).map(platform => {
           const account = getAccount(platform)
           const color = PLATFORM_COLOR[platform]
-          const isYT = platform === 'YOUTUBE'
+
+          const PlatformIcon = () => {
+            if (platform === 'YOUTUBE') return <Youtube className="w-4 h-4" />
+            if (platform === 'TIKTOK') return <TikTokIcon size={16} />
+            return <FacebookIcon size={16} />
+          }
 
           return (
             <div key={platform} className="flex items-center justify-between p-4 rounded-xl"
@@ -276,7 +293,7 @@ function ClippingPageInner() {
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center"
                   style={{ background: `${color}15`, color }}>
-                  {isYT ? <Youtube className="w-4 h-4" /> : <TikTokIcon size={16} />}
+                  <PlatformIcon />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-white">{PLATFORM_LABEL[platform]}</p>
@@ -343,7 +360,9 @@ function ClippingPageInner() {
                           style={{ background: `${color}15`, color }}>
                           {c.platform === 'YOUTUBE'
                             ? <Youtube className="w-3.5 h-3.5" />
-                            : <TikTokIcon size={14} />
+                            : c.platform === 'TIKTOK'
+                            ? <TikTokIcon size={14} />
+                            : <FacebookIcon size={14} />
                           }
                         </div>
                         <div>

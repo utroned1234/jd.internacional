@@ -49,6 +49,19 @@ async function fetchTikTokViews(videoId: string, accessToken: string): Promise<n
   }
 }
 
+async function fetchFacebookViews(videoId: string, accessToken: string): Promise<number | null> {
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v19.0/${videoId}?fields=views&access_token=${accessToken}`
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.views ?? null
+  } catch {
+    return null
+  }
+}
+
 /**
  * POST /api/admin/clipping/sync
  * Syncs view counts for all active submissions and credits earnings.
@@ -90,6 +103,8 @@ export async function POST(request: NextRequest) {
           currentViews = await fetchYouTubeViews(sub.videoId, accessToken)
         } else if (sub.platform === 'TIKTOK') {
           currentViews = await fetchTikTokViews(sub.videoId, accessToken)
+        } else if (sub.platform === 'FACEBOOK') {
+          currentViews = await fetchFacebookViews(sub.videoId, accessToken)
         }
 
         if (currentViews === null) {

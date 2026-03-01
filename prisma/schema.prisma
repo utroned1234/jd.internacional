@@ -726,6 +726,7 @@ model AppSetting {
 enum ClippingPlatform {
   YOUTUBE
   TIKTOK
+  FACEBOOK
 }
 
 enum ClippingAccountStatus {
