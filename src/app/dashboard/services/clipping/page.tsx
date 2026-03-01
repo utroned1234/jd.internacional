@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import {
   Play, Youtube, TrendingUp, DollarSign, Clock, CheckCircle2,
@@ -78,7 +78,7 @@ function TikTokIcon({ size = 20 }: { size?: number }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function ClippingPage() {
+function ClippingPageInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -494,5 +494,17 @@ export default function ClippingPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function ClippingPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#FF2D55' }} />
+      </div>
+    }>
+      <ClippingPageInner />
+    </Suspense>
   )
 }
