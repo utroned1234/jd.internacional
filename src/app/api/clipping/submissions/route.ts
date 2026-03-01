@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { decrypt } from '@/lib/crypto'
 
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY
+
 function getAuth() {
   const cookieStore = cookies()
   const token = cookieStore.get('auth_token')?.value
@@ -89,15 +91,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'La campaña ya terminó' }, { status: 400 })
     }
 
-    // Get connected account for this platform
-    const account = await prisma.clippingAccount.findUnique({
-      where: { userId_platform: { userId: auth.userId, platform: campaign.platform } },
-    })
-
-    if (!account || account.status !== 'ACTIVE') {
-      return NextResponse.json({
-        error: `Necesitás conectar tu cuenta de ${campaign.platform} primero`,
-      }, { status: 400 })
+    // For TikTok and Facebook, user must have a connected account
+    // YouTube uses server API key — no user OAuth needed
+    let account: Awaited<ReturnType<typeof prisma.clippingAccount.findUnique>> = null
+    if (campaign.platform !== 'YOUTUBE') {
+      account = await prisma.clippingAccount.findUnique({
+        where: { userId_platform: { userId: auth.userId, platform: campaign.platform } },
+      })
+      if (!account || account.status !== 'ACTIVE') {
+        return NextResponse.json({
+          error: `Necesitás conectar tu cuenta de ${campaign.platform} primero`,
+        }, { status: 400 })
+      }
     }
 
     // Extract video ID
@@ -123,22 +128,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch current views from platform API
-    const accessToken = decrypt(account.accessTokenEnc)
     let baseViews = 0
     let videoTitle = ''
 
     if (campaign.platform === 'YOUTUBE') {
+      if (!YOUTUBE_API_KEY) {
+        return NextResponse.json({ error: 'YouTube API key no configurada' }, { status: 500 })
+      }
       const ytRes = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${videoId}`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${videoId}&key=${YOUTUBE_API_KEY}`
       )
       if (ytRes.ok) {
         const ytData = await ytRes.json()
         const item = ytData.items?.[0]
+        if (!item) {
+          return NextResponse.json({ error: 'Video de YouTube no encontrado o privado' }, { status: 400 })
+        }
         baseViews = parseInt(item?.statistics?.viewCount || '0', 10)
         videoTitle = item?.snippet?.title || ''
       }
-    } else if (campaign.platform === 'TIKTOK') {
+    } else if (campaign.platform === 'TIKTOK' && account) {
+      const accessToken = decrypt(account.accessTokenEnc)
       const ttRes = await fetch('https://open.tiktokapis.com/v2/video/query/?fields=view_count,title', {
         method: 'POST',
         headers: {
@@ -153,7 +163,8 @@ export async function POST(request: NextRequest) {
         baseViews = video?.view_count || 0
         videoTitle = video?.title || ''
       }
-    } else if (campaign.platform === 'FACEBOOK') {
+    } else if (campaign.platform === 'FACEBOOK' && account) {
+      const accessToken = decrypt(account.accessTokenEnc)
       const fbRes = await fetch(
         `https://graph.facebook.com/v19.0/${videoId}?fields=views,title&access_token=${accessToken}`
       )
@@ -176,7 +187,7 @@ export async function POST(request: NextRequest) {
       data: {
         userId: auth.userId,
         campaignId,
-        accountId: account.id,
+        accountId: account?.id ?? null,
         platform: campaign.platform,
         videoId,
         videoUrl,

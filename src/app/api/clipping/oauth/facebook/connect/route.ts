@@ -18,8 +18,7 @@ export async function GET() {
     response_type: 'code',
     // pages_show_list: list user's pages
     // pages_read_engagement: read video views on pages
-    // user_videos: request access to user's videos (for personal profiles, limited)
-    scope: 'pages_show_list,pages_read_engagement,user_videos',
+    scope: 'pages_show_list,pages_read_engagement',
   })
 
   return NextResponse.redirect(

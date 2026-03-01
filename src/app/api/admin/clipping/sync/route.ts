@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { decrypt } from '@/lib/crypto'
 
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY
+
 function getAuth() {
   const cookieStore = cookies()
   const token = cookieStore.get('auth_token')?.value
@@ -17,11 +19,11 @@ async function requireAdmin(auth: ReturnType<typeof getAuth>) {
   return user?.isAdmin === true
 }
 
-async function fetchYouTubeViews(videoId: string, accessToken: string): Promise<number | null> {
+async function fetchYouTubeViews(videoId: string): Promise<number | null> {
   try {
+    if (!YOUTUBE_API_KEY) return null
     const res = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoId}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
+      `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoId}&key=${YOUTUBE_API_KEY}`
     )
     if (!res.ok) return null
     const data = await res.json()
@@ -96,15 +98,17 @@ export async function POST(request: NextRequest) {
 
     for (const sub of submissions) {
       try {
-        const accessToken = decrypt(sub.account.accessTokenEnc)
-
         let currentViews: number | null = null
         if (sub.platform === 'YOUTUBE') {
-          currentViews = await fetchYouTubeViews(sub.videoId, accessToken)
-        } else if (sub.platform === 'TIKTOK') {
-          currentViews = await fetchTikTokViews(sub.videoId, accessToken)
-        } else if (sub.platform === 'FACEBOOK') {
-          currentViews = await fetchFacebookViews(sub.videoId, accessToken)
+          // YouTube uses server API key — no user account needed
+          currentViews = await fetchYouTubeViews(sub.videoId)
+        } else if (sub.account) {
+          const accessToken = decrypt(sub.account.accessTokenEnc)
+          if (sub.platform === 'TIKTOK') {
+            currentViews = await fetchTikTokViews(sub.videoId, accessToken)
+          } else if (sub.platform === 'FACEBOOK') {
+            currentViews = await fetchFacebookViews(sub.videoId, accessToken)
+          }
         }
 
         if (currentViews === null) {

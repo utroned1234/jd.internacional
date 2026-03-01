@@ -781,7 +781,7 @@ model ClippingSubmission {
   id              String           @id @default(uuid()) @db.Uuid
   userId          String           @map("user_id") @db.Uuid
   campaignId      String           @map("campaign_id") @db.Uuid
-  accountId       String           @map("account_id") @db.Uuid
+  accountId       String?          @map("account_id") @db.Uuid
   platform        ClippingPlatform
   videoId         String           @map("video_id")
   videoUrl        String           @map("video_url")
@@ -800,7 +800,7 @@ model ClippingSubmission {
   updatedAt       DateTime         @updatedAt @map("updated_at")
   user            User             @relation(fields: [userId], references: [id])
   campaign        ClippingCampaign @relation(fields: [campaignId], references: [id])
-  account         ClippingAccount  @relation(fields: [accountId], references: [id])
+  account         ClippingAccount? @relation(fields: [accountId], references: [id])
   snapshots       ClippingSnapshot[]
 
   @@unique([campaignId, videoId])

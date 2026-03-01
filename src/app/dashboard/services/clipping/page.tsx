@@ -280,6 +280,7 @@ function ClippingPageInner() {
         {(['YOUTUBE', 'TIKTOK', 'FACEBOOK'] as Platform[]).map(platform => {
           const account = getAccount(platform)
           const color = PLATFORM_COLOR[platform]
+          const isYoutube = platform === 'YOUTUBE'
 
           const PlatformIcon = () => {
             if (platform === 'YOUTUBE') return <Youtube className="w-4 h-4" />
@@ -297,7 +298,11 @@ function ClippingPageInner() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-white">{PLATFORM_LABEL[platform]}</p>
-                  {account ? (
+                  {isYoutube ? (
+                    <p className="text-[11px]" style={{ color: '#00FF88' }}>
+                      No requiere conexión — usa URL pública
+                    </p>
+                  ) : account ? (
                     <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
                       {account.displayName}
                     </p>
@@ -309,7 +314,12 @@ function ClippingPageInner() {
                 </div>
               </div>
 
-              {account ? (
+              {isYoutube ? (
+                <span className="text-[10px] px-2.5 py-1 rounded-full font-medium"
+                  style={{ background: 'rgba(0,255,136,0.08)', color: '#00FF88', border: '1px solid rgba(0,255,136,0.2)' }}>
+                  ✓ Listo
+                </span>
+              ) : account ? (
                 <button onClick={() => disconnectAccount(platform)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors hover:bg-white/10"
                   style={{ color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -343,7 +353,8 @@ function ClippingPageInner() {
             {campaigns.map(c => {
               const color = PLATFORM_COLOR[c.platform]
               const isSelected = selectedCampaign?.id === c.id
-              const hasAccount = !!getAccount(c.platform)
+              // YouTube uses server API key — no connected account needed
+              const hasAccount = c.platform === 'YOUTUBE' ? true : !!getAccount(c.platform)
 
               return (
                 <div key={c.id}>
@@ -412,9 +423,13 @@ function ClippingPageInner() {
                           type="url"
                           value={videoUrl}
                           onChange={e => { setVideoUrl(e.target.value); setSubmitError('') }}
-                          placeholder={c.platform === 'YOUTUBE'
-                            ? 'https://youtu.be/... o https://youtube.com/watch?v=...'
-                            : 'https://www.tiktok.com/@usuario/video/...'}
+                          placeholder={
+                            c.platform === 'YOUTUBE'
+                              ? 'https://youtu.be/... o https://youtube.com/watch?v=...'
+                              : c.platform === 'TIKTOK'
+                              ? 'https://www.tiktok.com/@usuario/video/...'
+                              : 'https://www.facebook.com/video/...'
+                          }
                           className="w-full px-3 py-2.5 rounded-lg text-sm text-white outline-none transition-colors"
                           style={{
                             background: 'rgba(255,255,255,0.05)',
