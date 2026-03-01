@@ -7,7 +7,10 @@ export const metadata: Metadata = {
   icons: {
     icon: '/logo.png',
     apple: '/logo.png',
-  }
+  },
+  other: {
+    'tiktok-developers-site-verification': 'AEyrh7inRszlEkdzYf9JBWxCsuloQu0r',
+  },
 }
 
 export default function RootLayout({
