@@ -58,7 +58,8 @@ export async function GET(
         })
 
         // Redirect to dashboard with success
-        return NextResponse.redirect(new URL('/dashboard/services/ads?connected=' + platform, req.url))
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${new URL(req.url).host}`
+        return NextResponse.redirect(new URL('/dashboard/services/ads?connected=' + platform, appUrl))
     } catch (error: any) {
         console.error('[Ads] OAuth Callback Fatal Error:', error)
         // If it's a Meta configuration issue, log specifically
@@ -70,6 +71,7 @@ export async function GET(
                 encryptionKey: !!process.env.ADS_ENCRYPTION_KEY
             })
         }
-        return NextResponse.redirect(new URL('/dashboard/services/ads?error=' + encodeURIComponent(error.message), req.url))
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${new URL(req.url).host}`
+        return NextResponse.redirect(new URL('/dashboard/services/ads?error=' + encodeURIComponent(error.message), appUrl))
     }
 }
