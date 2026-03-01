@@ -41,6 +41,9 @@ model User {
   adCampaignsV2       AdCampaignV2[]
   packPurchaseRequests PackPurchaseRequest[]
   withdrawalRequests   WithdrawalRequest[]
+  clippingAccounts     ClippingAccount[]
+  clippingSubmissions  ClippingSubmission[]
+  clippingPayouts      ClippingPayout[]
   sponsor             User?                @relation("Sponsorship", fields: [sponsorId], references: [id])
   referrals           User[]               @relation("Sponsorship")
 
@@ -716,4 +719,114 @@ model AppSetting {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("app_settings")
+}
+
+// ─── Clipping Service Models ──────────────────────────────────────────────────
+
+enum ClippingPlatform {
+  YOUTUBE
+  TIKTOK
+}
+
+enum ClippingAccountStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+enum SubmissionStatus {
+  HOLD
+  APPROVED
+  REJECTED
+}
+
+model ClippingCampaign {
+  id          String             @id @default(uuid()) @db.Uuid
+  title       String
+  description String?            @db.Text
+  platform    ClippingPlatform
+  cpmUSD      Decimal            @map("cpm_usd") @db.Decimal(10, 4)
+  holdHours   Int                @default(48) @map("hold_hours")
+  minViews    Int                @default(0) @map("min_views")
+  isActive    Boolean            @default(true) @map("is_active")
+  endsAt      DateTime?          @map("ends_at")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+  submissions ClippingSubmission[]
+
+  @@map("clipping_campaigns")
+}
+
+model ClippingAccount {
+  id                String                @id @default(uuid()) @db.Uuid
+  userId            String                @map("user_id") @db.Uuid
+  platform          ClippingPlatform
+  providerAccountId String                @map("provider_account_id")
+  displayName       String?               @map("display_name")
+  accessTokenEnc    String                @map("access_token_enc")
+  refreshTokenEnc   String?               @map("refresh_token_enc")
+  expiresAt         DateTime?             @map("expires_at")
+  status            ClippingAccountStatus @default(ACTIVE)
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  submissions       ClippingSubmission[]
+
+  @@unique([userId, platform])
+  @@map("clipping_accounts")
+}
+
+model ClippingSubmission {
+  id              String           @id @default(uuid()) @db.Uuid
+  userId          String           @map("user_id") @db.Uuid
+  campaignId      String           @map("campaign_id") @db.Uuid
+  accountId       String           @map("account_id") @db.Uuid
+  platform        ClippingPlatform
+  videoId         String           @map("video_id")
+  videoUrl        String           @map("video_url")
+  videoTitle      String?          @map("video_title")
+  baseViews       Int              @default(0) @map("base_views")
+  currentViews    Int              @default(0) @map("current_views")
+  deltaViews      Int              @default(0) @map("delta_views")
+  earningsUSD     Decimal          @default(0) @map("earnings_usd") @db.Decimal(12, 4)
+  status          SubmissionStatus @default(HOLD)
+  holdUntil       DateTime         @map("hold_until")
+  approvedAt      DateTime?        @map("approved_at")
+  rejectedAt      DateTime?        @map("rejected_at")
+  rejectionReason String?          @map("rejection_reason")
+  lastSyncAt      DateTime?        @map("last_sync_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  user            User             @relation(fields: [userId], references: [id])
+  campaign        ClippingCampaign @relation(fields: [campaignId], references: [id])
+  account         ClippingAccount  @relation(fields: [accountId], references: [id])
+  snapshots       ClippingSnapshot[]
+
+  @@unique([campaignId, videoId])
+  @@index([userId, status])
+  @@map("clipping_submissions")
+}
+
+model ClippingSnapshot {
+  id           String             @id @default(uuid()) @db.Uuid
+  submissionId String             @map("submission_id") @db.Uuid
+  views        Int
+  takenAt      DateTime           @default(now()) @map("taken_at")
+  submission   ClippingSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId, takenAt])
+  @@map("clipping_snapshots")
+}
+
+model ClippingPayout {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  submissionId String?  @map("submission_id") @db.Uuid
+  amountUSD    Decimal  @map("amount_usd") @db.Decimal(12, 4)
+  description  String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("clipping_payouts")
 }

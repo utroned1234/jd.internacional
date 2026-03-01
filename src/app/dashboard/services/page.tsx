@@ -1,6 +1,6 @@
 'use client'
 
-import { ShoppingCart, MessageCircle, Layout, ArrowRight, CheckCircle2, Megaphone, Loader2 } from 'lucide-react'
+import { ShoppingCart, MessageCircle, Layout, ArrowRight, CheckCircle2, Megaphone, Loader2, Play } from 'lucide-react'
 import Link from 'next/link'
 
 const services = [
@@ -42,6 +42,16 @@ const services = [
     from: '#FF8800', to: '#FFCC00',
     features: ['Meta & Google Ads', 'TikTok Ads integration', 'Métricas en tiempo real'],
     link: '/dashboard/services/ads',
+    available: true,
+  },
+  {
+    id: 5,
+    title: 'Clipping',
+    description: 'Gana dinero subiendo videos a YouTube y TikTok. Cobra por cada mil vistas que generen tus clips.',
+    icon: Play,
+    from: '#FF2D55', to: '#FF6B00',
+    features: ['Pago por vistas (CPM)', 'YouTube & TikTok', 'Retiros a tu wallet'],
+    link: '/dashboard/services/clipping',
     available: true,
   }
 ]
