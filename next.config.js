@@ -8,6 +8,7 @@ const nextConfig = {
     },
     // Todos los paquetes que Baileys usa con código nativo de Node.js
     experimental: {
+        instrumentationHook: true,
         serverComponentsExternalPackages: [
             '@whiskeysockets/baileys',
             'pino',
