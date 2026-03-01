@@ -5,7 +5,7 @@ import { AdsHttpClient } from '../http-client'
 export class MetaAdapter implements IAdsAdapter {
     platform = AdPlatform.META
     private api = new AdsHttpClient('https://graph.facebook.com')
-    private apiVersion = 'v18.0'
+    private apiVersion = 'v25.0'
 
     private appId = process.env.META_APP_ID
     private appSecret = process.env.META_APP_SECRET
