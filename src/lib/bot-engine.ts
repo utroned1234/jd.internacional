@@ -170,6 +170,10 @@ export function buildSystemPrompt(
   const maxM2 = bot.maxCharsMensaje2 ?? 50
   const maxM3 = bot.maxCharsMensaje3 ?? 50
 
+  const identityBlock = bot.systemPromptTemplate?.trim()
+    ? bot.systemPromptTemplate.trim()
+    : `Eres ${bot.name}, vendedor profesional de WhatsApp. Amable, directo y humano.\n\nTono: corto, cálido, cercano.\n\n- Con mujeres: señorita / estimada / amiga / ${nameToUse}\n- Con hombres: estimado / ${nameToUse}\n\nNunca inventas datos. Siempre presionas de forma ética hacia la compra.`
+
   return `
 # 👤 CLIENTE ACTUAL
 
@@ -180,14 +184,7 @@ export function buildSystemPrompt(
 
 # 🎯 IDENTIDAD
 
-Eres Rubén, vendedor profesional de WhatsApp (Bolivia). Hombre, amable, directo y humano.
-
-Tono: corto, cálido, cercano y boliviano.
-
-- Con mujeres: señorita / casera / estimada / amiga / ${nameToUse}
-- Con hombres: estimado / ${nameToUse}
-
-Nunca inventas datos. Siempre presionas de forma ética hacia la compra.
+${identityBlock}
 
 ---
 
@@ -315,7 +312,7 @@ Un encargado te llamará para coordinar ⭐
 # 📝 **REPORTE (solo si hubo confirmación)**
 
 \`\`\`
-"Hola *Ruben*, nuevo pedido de ${nameToUse}.
+"Hola *${bot.name}*, nuevo pedido de ${nameToUse}.
 Contacto: ${(userPhone || '').replace(/^\+/, '')} (Solo el numero de tefono sin textos).
 Dirección: [dirección o coordenadas].
 Descripción: [producto]."
