@@ -326,12 +326,12 @@ export default function VirtualStorePage() {
                 {/* Product Modal */}
                 {showProductModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                        <div className="bg-[#0f111a] border border-white/10 rounded-3xl w-full max-w-lg p-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
-                            <h2 className="text-2xl font-bold mb-8">{editProduct ? 'Editar Producto' : 'Nuevo Producto'}</h2>
+                        <div className="bg-[#0f111a] border border-white/10 rounded-3xl w-full max-w-lg p-5 sm:p-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                            <h2 className="text-xl sm:text-2xl font-bold mb-5">{editProduct ? 'Editar Producto' : 'Nuevo Producto'}</h2>
                             <form onSubmit={handleSaveProduct} className="space-y-6">
                                 <div>
                                     <label className="text-xs font-bold text-dark-400 uppercase tracking-widest block mb-2">Nombre</label>
-                                    <input required value={prodName} onChange={e => setProdName(e.target.value)} className="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 focus:border-neon-blue outline-none transition-all" />
+                                    <input required value={prodName} onChange={e => setProdName(e.target.value)} className="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-dark-500 focus:border-neon-blue outline-none transition-all" />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-dark-400 uppercase tracking-widest block mb-2">Categoría</label>
@@ -351,7 +351,7 @@ export default function VirtualStorePage() {
                                             onChange={e => {
                                                 if (e.target.value !== 'Otra') setProdCategory(e.target.value)
                                             }}
-                                            className="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 focus:border-neon-blue outline-none transition-all"
+                                            className="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-dark-500 focus:border-neon-blue outline-none transition-all"
                                         >
                                             <option value="General">General</option>
                                             <option value="Electrónica y Tecnología">Electrónica y Tecnología</option>
@@ -411,7 +411,7 @@ export default function VirtualStorePage() {
                                             <select
                                                 value={prodCurrency}
                                                 onChange={e => setProdCurrency(e.target.value)}
-                                                className="w-24 bg-dark-900 border border-white/10 rounded-xl px-2 py-3 text-xs focus:border-neon-blue outline-none transition-all"
+                                                className="w-24 bg-dark-900 border border-white/10 rounded-xl px-2 py-3 text-xs text-white focus:border-neon-blue outline-none transition-all"
                                             >
                                                 <option value="USD">USD ($)</option>
                                                 <option value="PEN">PEN (S/)</option>
@@ -428,7 +428,7 @@ export default function VirtualStorePage() {
                                     </div>
                                     <div className="w-full sm:w-32 space-y-2">
                                         <label className="text-xs font-bold text-dark-400 uppercase tracking-widest block">Stock</label>
-                                        <input required type="number" value={prodStock} onChange={e => setProdStock(e.target.value)} className="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 focus:border-neon-blue outline-none transition-all" />
+                                        <input required type="number" value={prodStock} onChange={e => setProdStock(e.target.value)} className="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-dark-500 focus:border-neon-blue outline-none transition-all" />
                                     </div>
                                 </div>
                                 {selectedStore.type === 'NETWORK_MARKETING' && (
@@ -441,7 +441,7 @@ export default function VirtualStorePage() {
                                 )}
                                 <div>
                                     <label className="text-xs font-bold text-dark-400 uppercase tracking-widest block mb-2">Galería de Imágenes (Hasta 4)</label>
-                                    <div className="grid grid-cols-4 gap-4 mb-4">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                                         {prodImages.map((img, idx) => (
                                             <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-white/10 bg-dark-900 group">
                                                 <img src={img} className="w-full h-full object-cover" />
@@ -499,11 +499,11 @@ export default function VirtualStorePage() {
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-dark-400 uppercase tracking-widest block mb-2">Descripción</label>
-                                    <textarea value={prodDesc} onChange={e => setProdDesc(e.target.value)} rows={3} className="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3" />
+                                    <textarea value={prodDesc} onChange={e => setProdDesc(e.target.value)} rows={3} className="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-dark-500 focus:border-neon-blue outline-none transition-all resize-y" />
                                 </div>
-                                <div className="flex gap-4 pt-4">
-                                    <button type="button" onClick={() => setShowProductModal(false)} className="flex-1 py-4 text-dark-400 font-bold">Cancelar</button>
-                                    <button type="submit" className="flex-1 bg-neon-blue text-dark-950 font-bold rounded-xl shadow-lg shadow-neon-blue/20 transition-all active:scale-95">Guardar</button>
+                                <div className="flex gap-3 pt-4">
+                                    <button type="button" onClick={() => setShowProductModal(false)} className="flex-1 py-3 sm:py-4 text-dark-300 font-bold rounded-xl border border-white/10 hover:bg-white/5 transition-all">Cancelar</button>
+                                    <button type="submit" className="flex-1 py-3 sm:py-4 bg-neon-blue text-dark-950 font-bold rounded-xl shadow-lg shadow-neon-blue/20 transition-all active:scale-95">Guardar</button>
                                 </div>
                             </form>
                         </div>
@@ -616,7 +616,7 @@ export default function VirtualStorePage() {
 
             {showStoreModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                    <div className="bg-[#0f111a] border border-white/10 rounded-3xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                    <div className="bg-[#0f111a] border border-white/10 rounded-3xl w-full max-w-md p-5 sm:p-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-bold">{editStore ? 'Configurar Tienda' : 'Crear Tienda'}</h2>
                             <button onClick={() => setShowStoreModal(false)}><X size={24} className="text-dark-400" /></button>
@@ -658,15 +658,15 @@ export default function VirtualStorePage() {
 
                             <div>
                                 <label className="text-xs font-bold text-dark-400 uppercase tracking-widest block mb-2">Nombre</label>
-                                <input required value={storeName} onChange={e => setStoreName(e.target.value)} placeholder="Ej: Mi Boutique" className="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3" />
+                                <input required value={storeName} onChange={e => setStoreName(e.target.value)} placeholder="Ej: Mi Boutique" className="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-dark-500 focus:border-neon-blue outline-none transition-all" />
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-dark-400 uppercase tracking-widest block mb-2">Slug (URL)</label>
-                                <input required value={storeSlug} onChange={e => setStoreSlug(e.target.value)} placeholder="mi-boutique" className="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3" />
+                                <input required value={storeSlug} onChange={e => setStoreSlug(e.target.value)} placeholder="mi-boutique" className="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-dark-500 focus:border-neon-blue outline-none transition-all" />
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-dark-400 uppercase tracking-widest block mb-2">WhatsApp de Pedidos</label>
-                                <input value={storeWhatsapp} onChange={e => setStoreWhatsapp(e.target.value)} placeholder="Ej: 51987654321 (con código de país)" className="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 focus:border-neon-blue outline-none" />
+                                <input value={storeWhatsapp} onChange={e => setStoreWhatsapp(e.target.value)} placeholder="Ej: 51987654321 (con código de país)" className="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-dark-500 focus:border-neon-blue outline-none transition-all" />
                                 <p className="text-[10px] text-dark-500 mt-2">Los pedidos de esta tienda llegarán directamente a este número.</p>
                             </div>
 

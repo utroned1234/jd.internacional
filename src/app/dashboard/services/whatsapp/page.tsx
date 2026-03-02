@@ -431,17 +431,17 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
   return (
     <div className="space-y-6">
       {/* Status toggle */}
-      <div className="glass-panel p-5 rounded-2xl flex items-center justify-between">
-        <div>
+      <div className="glass-panel p-5 rounded-2xl flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <div className="text-sm font-bold text-white">Estado del bot</div>
-          <div className="text-xs text-dark-400 mt-0.5">
+          <div className="text-xs text-dark-400 mt-0.5 truncate">
             {bot.status === 'ACTIVE' ? 'El bot está respondiendo mensajes' : 'El bot está pausado'}
           </div>
         </div>
         <button
           onClick={toggleStatus}
           disabled={savingStatus}
-          className="flex items-center gap-2 text-sm font-medium transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 text-sm font-medium transition-colors disabled:opacity-50 shrink-0"
         >
           {savingStatus ? (
             <Spinner />
@@ -479,7 +479,7 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
                 type={showYcloud ? 'text' : 'password'}
                 value={form.ycloudApiKey}
                 onChange={e => setForm(f => ({ ...f, ycloudApiKey: e.target.value }))}
-                placeholder={creds?.hasYcloudKey ? '••••••••••• (dejar vacío para mantener)' : 'yk_live_...'}
+                placeholder={creds?.hasYcloudKey ? '(dejar vacío para mantener)' : 'yk_live_...'}
                 className="w-full bg-dark-900/50 border border-white/10 rounded-xl px-4 py-2.5 pr-10 text-sm text-white placeholder-dark-500 focus:outline-none focus:border-neon-purple/40"
               />
               <button
@@ -506,7 +506,7 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
               type={showOpenai ? 'text' : 'password'}
               value={form.openaiApiKey}
               onChange={e => setForm(f => ({ ...f, openaiApiKey: e.target.value }))}
-              placeholder={creds?.hasOpenAIKey ? '••••••••••• (dejar vacío para mantener)' : 'sk-proj-...'}
+              placeholder={creds?.hasOpenAIKey ? '(dejar vacío para mantener)' : 'sk-proj-...'}
               className="w-full bg-dark-900/50 border border-white/10 rounded-xl px-4 py-2.5 pr-10 text-sm text-white placeholder-dark-500 focus:outline-none focus:border-neon-purple/40"
             />
             <button
@@ -874,7 +874,7 @@ function PromptTab({ bot, onSaved }: { bot: Bot; onSaved: (updated: Partial<Bot>
           <label className="block text-xs font-medium text-dark-300 mb-3">
             Límite de caracteres por mensaje (opcional)
           </label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {(['maxCharsMensaje1', 'maxCharsMensaje2', 'maxCharsMensaje3'] as const).map((field, i) => (
               <div key={field}>
                 <label className="block text-[10px] text-dark-400 mb-1">Mensaje {i + 1}</label>
@@ -1222,7 +1222,7 @@ function ProductForm({
             <option value="CUP">$ Peso cubano (CUP)</option>
           </select>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className={labelClass}>Precio unitario</label>
             <input
@@ -1301,20 +1301,20 @@ function ProductForm({
       {/* Testimonials */}
       <div className={sectionClass}>
         <div className="text-xs font-bold text-dark-400 uppercase tracking-wider">Fotos de testimonios</div>
-        <div className="grid grid-cols-[2px_1fr] items-start gap-0">
-          <div className="text-xs text-dark-500 mb-2 col-span-2 grid grid-cols-[140px_1fr] gap-2 px-1">
-            <span>Tipo de testimonio</span>
-            <span>URL de la foto</span>
+        <div className="space-y-2">
+          <div className="hidden sm:grid sm:grid-cols-[1fr_2fr] gap-2 px-1">
+            <span className="text-xs text-dark-500">Tipo de testimonio</span>
+            <span className="text-xs text-dark-500">URL de la foto</span>
           </div>
           {[1, 2, 3, 4, 5, 6, 7].map(n => {
             const labelKey = `test${n}Label` as keyof ProductFormState
             const urlKey = `test${n}Url` as keyof ProductFormState
             return (
-              <div key={n} className="col-span-2 grid grid-cols-[140px_1fr] gap-2 mb-2">
+              <div key={n} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2">
                 <input
                   value={form[labelKey] as string}
                   onChange={e => setField(labelKey, e.target.value)}
-                  placeholder="testimonio de…"
+                  placeholder="Tipo de testimonio…"
                   className={inputClass}
                 />
                 <input
