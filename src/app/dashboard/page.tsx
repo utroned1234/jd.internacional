@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Users, TrendingUp, UserCircle, Activity, CreditCard, DollarSign, Settings, LogOut, Camera, RefreshCw } from 'lucide-react'
+import { Users, TrendingUp, UserCircle, CreditCard, DollarSign, Settings, LogOut, Camera } from 'lucide-react'
 
 interface DashboardData {
   user: {
@@ -23,18 +23,6 @@ interface DashboardData {
   }
 }
 
-interface Commission {
-  id: string
-  type: string
-  amount: number
-  description: string
-  createdAt: string
-}
-
-interface ChartPoint {
-  label: string
-  value: number
-}
 
 const backgroundImages = [
   'https://i.ibb.co/ksmGqK0R/estrategia-metaverso-de-meta-2025-detalle2-1024x573.jpg',
@@ -42,86 +30,32 @@ const backgroundImages = [
   'https://i.ibb.co/cK5Wv5yG/estrategia-metaverso-de-meta-2025.jpg',
 ]
 
-const DAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
-
-function buildDayChart(commissions: Commission[]): ChartPoint[] {
-  const points: ChartPoint[] = []
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date()
-    d.setDate(d.getDate() - i)
-    const key = d.toISOString().split('T')[0]
-    const label = DAY_LABELS[d.getDay()]
-    const value = commissions
-      .filter(c => c.createdAt.split('T')[0] === key)
-      .reduce((s, c) => s + c.amount, 0)
-    points.push({ label, value })
-  }
-  return points
-}
-
-function buildWeekChart(commissions: Commission[]): ChartPoint[] {
-  const points: ChartPoint[] = []
-  for (let i = 3; i >= 0; i--) {
-    const end = new Date()
-    end.setDate(end.getDate() - i * 7)
-    const start = new Date(end)
-    start.setDate(start.getDate() - 6)
-    const value = commissions
-      .filter(c => {
-        const d = new Date(c.createdAt)
-        return d >= start && d <= end
-      })
-      .reduce((s, c) => s + c.amount, 0)
-    points.push({ label: `Sem ${4 - i}`, value })
-  }
-  return points
-}
 
 export default function DashboardPage() {
   const router = useRouter()
   const [data, setData] = useState<DashboardData | null>(null)
-  const [commissions, setCommissions] = useState<Commission[]>([])
-  const [chartView, setChartView] = useState<'dia' | 'semana'>('dia')
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [uploading, setUploading] = useState(false)
   const [avatarError, setAvatarError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const fetchData = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true)
-    else setRefreshing(true)
+  const fetchData = useCallback(async () => {
+    setLoading(true)
     try {
-      const [networkRes, commissionsRes] = await Promise.all([
-        fetch('/api/network'),
-        fetch('/api/commissions'),
-      ])
-      if (networkRes.status === 401) { router.push('/login'); return }
-      const networkData = await networkRes.json()
+      const res = await fetch('/api/network')
+      if (res.status === 401) { router.push('/login'); return }
+      const networkData = await res.json()
       if (networkData?.user) setData(networkData)
-      if (commissionsRes.ok) {
-        const commData = await commissionsRes.json()
-        setCommissions(commData.commissions ?? [])
-      }
-      setLastUpdated(new Date())
     } catch {
-      // silently fail on refresh
+      // silently fail
     } finally {
       setLoading(false)
-      setRefreshing(false)
     }
   }, [router])
 
   useEffect(() => {
     fetchData()
-  }, [fetchData])
-
-  // Auto-refresh cada 60 segundos
-  useEffect(() => {
-    const interval = setInterval(() => fetchData(true), 60_000)
-    return () => clearInterval(interval)
   }, [fetchData])
 
   // Slider de banner
@@ -174,11 +108,6 @@ export default function DashboardPage() {
   }
 
   const inviteLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/register?ref=${data.user.referralCode}`
-
-  // Datos del gráfico según la vista seleccionada
-  const chartPoints = chartView === 'dia' ? buildDayChart(commissions) : buildWeekChart(commissions)
-  const maxVal = Math.max(...chartPoints.map(p => p.value), 0.01)
-  const periodTotal = chartPoints.reduce((s, p) => s + p.value, 0)
 
   return (
     <div className="px-4 sm:px-6 pt-2 pb-20 max-w-7xl mx-auto space-y-6">
@@ -275,125 +204,6 @@ export default function DashboardPage() {
             <p className="text-sm sm:text-xl font-black tracking-tighter" style={{ color: stat.from }}>{stat.val}</p>
           </div>
         ))}
-      </div>
-
-      {/* ── GRÁFICO DE COMISIONES ── */}
-      <div className="crystal-glass" style={{ boxShadow: '0 8px 60px rgba(0,200,255,0.08), 0 2px 20px rgba(120,0,255,0.06), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
-        <div className="absolute -bottom-10 left-1/4 w-48 h-48 rounded-full blur-3xl opacity-15 pointer-events-none" style={{ background: 'radial-gradient(circle, #00BFFF, transparent)' }} />
-        <div className="absolute -top-8 right-1/4 w-32 h-32 rounded-full blur-2xl opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle, #AA00FF, transparent)' }} />
-
-        <div className="relative z-10 p-4 sm:p-6">
-
-          {/* Header del gráfico */}
-          <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(0,245,255,0.1)', border: '1px solid rgba(0,245,255,0.2)' }}>
-                <Activity className="w-3.5 h-3.5" style={{ color: '#00F5FF' }} />
-              </div>
-              <span className="text-xs font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.6)' }}>Comisiones</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Indicador de última actualización */}
-              <button
-                onClick={() => fetchData(true)}
-                disabled={refreshing}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg transition-all"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-                title="Actualizar datos"
-              >
-                <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} style={{ color: refreshing ? '#00F5FF' : 'rgba(255,255,255,0.2)' }} />
-                {lastUpdated && (
-                  <span className="text-[8px] font-bold hidden sm:inline" style={{ color: 'rgba(255,255,255,0.2)' }}>
-                    {lastUpdated.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                )}
-              </button>
-
-              {/* Toggles Día / Semana */}
-              <div className="flex gap-1 p-0.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <button
-                  onClick={() => setChartView('dia')}
-                  className="px-3 py-1 rounded-md text-[9px] font-black uppercase tracking-widest transition-all"
-                  style={chartView === 'dia'
-                    ? { background: 'rgba(0,245,255,0.15)', color: '#00F5FF', border: '1px solid rgba(0,245,255,0.3)' }
-                    : { color: 'rgba(255,255,255,0.25)', border: '1px solid transparent' }}
-                >
-                  Día
-                </button>
-                <button
-                  onClick={() => setChartView('semana')}
-                  className="px-3 py-1 rounded-md text-[9px] font-black uppercase tracking-widest transition-all"
-                  style={chartView === 'semana'
-                    ? { background: 'rgba(0,245,255,0.15)', color: '#00F5FF', border: '1px solid rgba(0,245,255,0.3)' }
-                    : { color: 'rgba(255,255,255,0.25)', border: '1px solid transparent' }}
-                >
-                  Semana
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Total del período */}
-          <div className="mb-4">
-            <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>
-              Total {chartView === 'dia' ? 'últimos 7 días' : 'últimas 4 semanas'}
-            </p>
-            <p className="text-xl sm:text-2xl font-black tracking-tighter" style={{ color: '#00F5FF' }}>
-              ${periodTotal.toFixed(2)}
-            </p>
-          </div>
-
-          {/* Barras */}
-          <div className="relative h-28 sm:h-44 w-full flex items-end justify-between gap-1.5 sm:gap-2">
-            {chartPoints.map((point, i) => {
-              const pct = maxVal > 0 ? (point.value / maxVal) * 100 : 0
-              const isEmpty = point.value === 0
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group/bar">
-                  {/* Valor al hover */}
-                  <div className="opacity-0 group-hover/bar:opacity-100 transition-opacity text-[8px] font-black mb-0.5" style={{ color: '#00F5FF' }}>
-                    ${point.value.toFixed(2)}
-                  </div>
-                  {/* Barra */}
-                  <div className="w-full relative rounded-t-md overflow-hidden transition-all duration-500 group-hover/bar:brightness-125"
-                    style={{
-                      height: isEmpty ? '6px' : `${Math.max(pct, 4)}%`,
-                      background: isEmpty
-                        ? 'rgba(255,255,255,0.03)'
-                        : 'linear-gradient(to top, #0044FF99, #7B00FFCC, #FF2DF7AA)',
-                      border: isEmpty ? '1px solid rgba(255,255,255,0.04)' : '1px solid rgba(0,245,255,0.15)',
-                    }}
-                  >
-                    {!isEmpty && (
-                      <div className="absolute bottom-0 w-full blur-sm opacity-30"
-                        style={{ height: '40%', background: '#00F5FF' }} />
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Labels */}
-          <div className="flex justify-between mt-2">
-            {chartPoints.map((point, i) => (
-              <div key={i} className="flex-1 text-center">
-                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.2)' }}>
-                  {point.label}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Sin datos */}
-          {periodTotal === 0 && (
-            <p className="text-center text-[10px] mt-3 font-bold" style={{ color: 'rgba(255,255,255,0.15)' }}>
-              Sin comisiones en este período
-            </p>
-          )}
-
-        </div>
       </div>
 
     </div>
